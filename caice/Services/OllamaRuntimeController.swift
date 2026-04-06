@@ -1,19 +1,12 @@
 import Foundation
 
-#if os(macOS)
-import AppKit
-#endif
-
 struct OllamaRuntimeState: Equatable {
-    let isAppInstalled: Bool
-    let isAppRunning: Bool
     let isReachable: Bool
 }
 
 protocol OllamaRuntimeControlling {
     func probe(endpointURL: URL) async -> OllamaRuntimeState
-    func start(endpointURL: URL) async throws -> OllamaRuntimeState
-    func restart(endpointURL: URL) async throws -> OllamaRuntimeState
+    func connect(endpointURL: URL) async throws -> OllamaRuntimeState
 }
 
 struct OllamaRuntimeController: OllamaRuntimeControlling {
@@ -27,8 +20,6 @@ struct OllamaRuntimeController: OllamaRuntimeControlling {
             }
         }
     }
-
-    private static let bundleIdentifier = "com.electron.ollama"
 
     private let session: URLSession
     private let readinessTimeoutNanoseconds: UInt64
@@ -45,22 +36,14 @@ struct OllamaRuntimeController: OllamaRuntimeControlling {
     }
 
     func probe(endpointURL: URL) async -> OllamaRuntimeState {
-        let isInstalled = await installedApplicationURL() != nil
-        let isRunning = await appIsRunning()
         let isReachable = await endpointIsReachable(endpointURL)
 
         return OllamaRuntimeState(
-            isAppInstalled: isInstalled,
-            isAppRunning: isRunning,
             isReachable: isReachable
         )
     }
 
-    func start(endpointURL: URL) async throws -> OllamaRuntimeState {
-        return try await waitUntilReachable(endpointURL)
-    }
-
-    func restart(endpointURL: URL) async throws -> OllamaRuntimeState {
+    func connect(endpointURL: URL) async throws -> OllamaRuntimeState {
         return try await waitUntilReachable(endpointURL)
     }
 
@@ -138,26 +121,6 @@ struct OllamaRuntimeController: OllamaRuntimeControlling {
         }
 
         return components.url
-    }
-
-    private func installedApplicationURL() async -> URL? {
-#if os(macOS)
-        return await MainActor.run {
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.bundleIdentifier)
-        }
-#else
-        return nil
-#endif
-    }
-
-    private func appIsRunning() async -> Bool {
-#if os(macOS)
-        return await MainActor.run {
-            !NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundleIdentifier).isEmpty
-        }
-#else
-        return false
-#endif
     }
 
     private static func makeSession() -> URLSession {

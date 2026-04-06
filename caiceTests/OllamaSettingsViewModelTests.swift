@@ -8,7 +8,7 @@ struct OllamaSettingsViewModelTests {
     @MainActor
     @Test func loadModelsReturnsAvailableModels() async throws {
                 let controller = StubRuntimeController(
-                        probedState: OllamaRuntimeState(isAppInstalled: true, isAppRunning: true, isReachable: true)
+                probedState: OllamaRuntimeState(isReachable: true)
                 )
         let session = makeSession { request in
             #expect(request.url?.absoluteString == "http://127.0.0.1:11434/api/tags")
@@ -62,7 +62,7 @@ struct OllamaSettingsViewModelTests {
     @MainActor
     @Test func loadModelsShowsConnectionErrorWhenUnavailable() async throws {
         let controller = StubRuntimeController(
-            probedState: OllamaRuntimeState(isAppInstalled: true, isAppRunning: false, isReachable: false)
+            probedState: OllamaRuntimeState(isReachable: false)
         )
 
         let viewModel = OllamaSettingsViewModel(
@@ -81,8 +81,8 @@ struct OllamaSettingsViewModelTests {
     @MainActor
     @Test func startOllamaLoadsInstalledModels() async throws {
         let controller = StubRuntimeController(
-            probedState: OllamaRuntimeState(isAppInstalled: true, isAppRunning: false, isReachable: false),
-            startState: OllamaRuntimeState(isAppInstalled: true, isAppRunning: true, isReachable: true)
+            probedState: OllamaRuntimeState(isReachable: false),
+            connectState: OllamaRuntimeState(isReachable: true)
         )
         let session = makeSession { request in
             #expect(request.url?.absoluteString == "http://127.0.0.1:11434/api/tags")
@@ -108,7 +108,7 @@ struct OllamaSettingsViewModelTests {
         await viewModel.refreshStatus()
         await viewModel.startOllama()
 
-        #expect(controller.startCallCount == 1)
+        #expect(controller.connectCallCount == 1)
         #expect(viewModel.serviceStatus == .running)
         #expect(viewModel.availableModels.map(\.name) == ["gemma3:4b"])
         #expect(viewModel.selectedModelName == "gemma3:4b")
@@ -118,8 +118,8 @@ struct OllamaSettingsViewModelTests {
     @MainActor
     @Test func restartOllamaReloadsInstalledModels() async throws {
         let controller = StubRuntimeController(
-            probedState: OllamaRuntimeState(isAppInstalled: true, isAppRunning: true, isReachable: true),
-            restartState: OllamaRuntimeState(isAppInstalled: true, isAppRunning: true, isReachable: true)
+            probedState: OllamaRuntimeState(isReachable: true),
+            connectState: OllamaRuntimeState(isReachable: true)
         )
         let session = makeSession { request in
             #expect(request.url?.absoluteString == "http://127.0.0.1:11434/api/tags")
@@ -146,7 +146,7 @@ struct OllamaSettingsViewModelTests {
         await viewModel.refreshStatus()
         await viewModel.restartOllama()
 
-        #expect(controller.restartCallCount == 1)
+        #expect(controller.connectCallCount == 1)
         #expect(viewModel.serviceStatus == .running)
         #expect(viewModel.availableModels.map(\.name) == ["gemma3:4b", "nomic-embed-text:latest"])
         #expect(viewModel.configuredModelInstalled)
@@ -155,7 +155,7 @@ struct OllamaSettingsViewModelTests {
     @MainActor
     @Test func refreshClearsStaleModelsWhenRuntimeBecomesUnavailable() async throws {
         let controller = StubRuntimeController(
-            probedState: OllamaRuntimeState(isAppInstalled: true, isAppRunning: true, isReachable: true)
+            probedState: OllamaRuntimeState(isReachable: true)
         )
 
         let responseBody = LockedString(
@@ -184,7 +184,7 @@ struct OllamaSettingsViewModelTests {
         #expect(viewModel.availableModels.map(\.name) == ["gemma3:4b"])
         #expect(viewModel.serviceStatus == .running)
 
-        controller.probedState = OllamaRuntimeState(isAppInstalled: true, isAppRunning: false, isReachable: false)
+        controller.probedState = OllamaRuntimeState(isReachable: false)
         await viewModel.refreshStatus()
 
         #expect(viewModel.availableModels.isEmpty)
@@ -195,7 +195,7 @@ struct OllamaSettingsViewModelTests {
     @MainActor
     @Test func refreshAutoSelectsInstalledModelWhenConfiguredModelIsStale() async throws {
         let controller = StubRuntimeController(
-            probedState: OllamaRuntimeState(isAppInstalled: true, isAppRunning: true, isReachable: true)
+            probedState: OllamaRuntimeState(isReachable: true)
         )
 
         let selectedModelCapture = LockedString("")
@@ -235,35 +235,25 @@ struct OllamaSettingsViewModelTests {
 @MainActor
 private final class StubRuntimeController: OllamaRuntimeControlling {
     var probedState: OllamaRuntimeState
-    var startState: OllamaRuntimeState
-    var restartState: OllamaRuntimeState
-    private(set) var startCallCount = 0
-    private(set) var restartCallCount = 0
+    var connectState: OllamaRuntimeState
+    private(set) var connectCallCount = 0
 
     init(
         probedState: OllamaRuntimeState,
-        startState: OllamaRuntimeState? = nil,
-        restartState: OllamaRuntimeState? = nil
+        connectState: OllamaRuntimeState? = nil
     ) {
         self.probedState = probedState
-        self.startState = startState ?? probedState
-        self.restartState = restartState ?? self.startState
+        self.connectState = connectState ?? probedState
     }
 
     func probe(endpointURL: URL) async -> OllamaRuntimeState {
         probedState
     }
 
-    func start(endpointURL: URL) async throws -> OllamaRuntimeState {
-        startCallCount += 1
-        probedState = startState
-        return startState
-    }
-
-    func restart(endpointURL: URL) async throws -> OllamaRuntimeState {
-        restartCallCount += 1
-        probedState = restartState
-        return restartState
+    func connect(endpointURL: URL) async throws -> OllamaRuntimeState {
+        connectCallCount += 1
+        probedState = connectState
+        return connectState
     }
 }
 
