@@ -36,7 +36,6 @@ struct ContentView: View {
     @StateObject private var viewModel: ChatViewModel
     @State private var selection: SidebarDestination? = .chat
     @State private var runtime: ChatRuntimeDescriptor
-    @State private var didReconcileRuntimeModel = false
 
     init(
         viewModel: @autoclosure @escaping () -> ChatViewModel,
@@ -137,7 +136,6 @@ struct ContentView: View {
                 isSending: viewModel.isSending,
                 lastError: viewModel.errorText,
                 onSelectModel: { modelName in
-                    UserDefaults.standard.set(modelName, forKey: ChatServiceFactory.ollamaModelDefaultsKey)
                     runtime = ChatRuntimeDescriptor(
                         provider: runtime.provider,
                         providerName: runtime.providerName,
@@ -146,7 +144,7 @@ struct ContentView: View {
                         endpoint: runtime.endpoint,
                         statusSummary: runtime.statusSummary
                     )
-                    viewModel.updateOllamaModel(modelName)
+                    viewModel.updateModel(modelName)
                 }
             )
         } else {
@@ -206,6 +204,13 @@ struct ContentView: View {
                     }
                 }
             }
+            .onChange(of: viewModel.streamingRevision) {
+                if let lastID = viewModel.messages.last?.id {
+                    withAnimation {
+                        proxy.scrollTo(lastID, anchor: .bottom)
+                    }
+                }
+            }
         }
     }
 
@@ -222,6 +227,13 @@ struct ContentView: View {
                 TextField("Message", text: $viewModel.composerText, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...5)
+
+                if viewModel.isSending {
+                    Button("Cancel") {
+                        viewModel.cancelCurrentSend()
+                    }
+                    .buttonStyle(.bordered)
+                }
 
                 Button {
                     Task {
@@ -242,57 +254,27 @@ struct ContentView: View {
     }
 
     private func reconcileRuntimeModelIfNeeded() async {
-        guard !didReconcileRuntimeModel else { return }
-        didReconcileRuntimeModel = true
-
         guard runtime.provider == .ollama,
               let endpointURL = runtime.endpointURL else {
             return
         }
 
-        guard let installedModels = try? await fetchInstalledModelNames(endpointURL: endpointURL),
-              let firstInstalledModel = installedModels.first else {
+        guard let reconciledModel = await viewModel.reconcileModelIfNeeded(
+            endpointURL: endpointURL,
+            runtimeModelName: runtime.modelName
+        ) else {
             return
         }
 
-        let needsReconcile = runtime.modelName == ChatServiceFactory.automaticModelLabel
-            || !installedModels.contains(runtime.modelName)
-        guard needsReconcile else { return }
-
-        UserDefaults.standard.set(firstInstalledModel, forKey: ChatServiceFactory.ollamaModelDefaultsKey)
         runtime = ChatRuntimeDescriptor(
             provider: runtime.provider,
             providerName: runtime.providerName,
-            modelName: firstInstalledModel,
+            modelName: reconciledModel,
             endpointURL: runtime.endpointURL,
             endpoint: runtime.endpoint,
             statusSummary: runtime.statusSummary
         )
-        viewModel.updateOllamaModel(firstInstalledModel)
     }
-
-    private func fetchInstalledModelNames(endpointURL: URL) async throws -> [String] {
-        var request = URLRequest(url: endpointURL.appending(path: "api/tags"))
-        request.httpMethod = "GET"
-        request.timeoutInterval = 3.0
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            return []
-        }
-
-        let decoded = try JSONDecoder().decode(OllamaTagsResponse.self, from: data)
-        return decoded.models.map(\.name)
-    }
-}
-
-private struct OllamaTagsResponse: Decodable {
-    struct Model: Decodable {
-        let name: String
-    }
-
-    let models: [Model]
 }
 
 #Preview {

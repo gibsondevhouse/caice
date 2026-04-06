@@ -121,10 +121,20 @@ final class OllamaChatService: ChatService {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedLine.isEmpty else { continue }
 
-            let chunk = try decoder.decode(
-                OllamaStreamResponsePayload.self,
-                from: Data(trimmedLine.utf8)
-            )
+            let lineData = Data(trimmedLine.utf8)
+
+            let chunk: OllamaStreamResponsePayload
+            do {
+                chunk = try decoder.decode(OllamaStreamResponsePayload.self, from: lineData)
+            } catch {
+                if let payload = try? decoder.decode(OllamaStreamErrorPayload.self, from: lineData),
+                   !payload.error.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    throw ServiceError.badStatus(httpResponse.statusCode, payload.error)
+                }
+
+                // Ignore malformed chunk lines and continue collecting deltas.
+                continue
+            }
 
             let delta = chunk.message?.content ?? ""
             if !delta.isEmpty {
@@ -185,7 +195,7 @@ final class OllamaChatService: ChatService {
             throw ServiceError.badStatus(httpResponse.statusCode, body)
         }
 
-        let decoded = try JSONDecoder().decode(OllamaTagsResponsePayload.self, from: data)
+                let decoded = try JSONDecoder().decode(OllamaTagsResponse.self, from: data)
         guard let firstModel = decoded.models.first?.name,
               !firstModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw ServiceError.emptyResponse
@@ -229,10 +239,6 @@ private struct OllamaStreamResponsePayload: Decodable {
     let done: Bool
 }
 
-private struct OllamaTagsResponsePayload: Decodable {
-    struct Model: Decodable {
-        let name: String
-    }
-
-    let models: [Model]
+private struct OllamaStreamErrorPayload: Decodable {
+    let error: String
 }

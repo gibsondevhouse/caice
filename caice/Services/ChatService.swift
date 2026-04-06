@@ -1,6 +1,8 @@
 import Foundation
 
 protocol ChatService: Sendable {
+    func updateModel(_ model: String)
+
     func send(
         conversation: [ChatMessage],
         newMessage: String
@@ -14,6 +16,10 @@ protocol ChatService: Sendable {
 }
 
 extension ChatService {
+    func updateModel(_ model: String) {
+        _ = model
+    }
+
     func send(
         conversation: [ChatMessage],
         newMessage: String,
