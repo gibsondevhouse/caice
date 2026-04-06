@@ -10,16 +10,16 @@ import SwiftUI
 struct ContentView: View {
     private enum SidebarDestination: String, CaseIterable, Hashable, Identifiable {
         case chat
-        case runtime
+        case modelSettings
 
         var id: String { rawValue }
 
         var title: String {
             switch self {
             case .chat:
-                return "Chat"
-            case .runtime:
-                return "Runtime"
+                return "Home"
+            case .modelSettings:
+                return "Model Settings"
             }
         }
 
@@ -27,11 +27,20 @@ struct ContentView: View {
             switch self {
             case .chat:
                 return "bubble.left.and.bubble.right.fill"
-            case .runtime:
-                return "cpu"
+            case .modelSettings:
+                return "slider.horizontal.3"
             }
         }
     }
+
+    private let starterPrompts = [
+        "Brainstorm a product idea I can ship in two weekends",
+        "Help me debug a SwiftUI state update issue",
+        "Draft a concise, professional email",
+        "Summarize these notes into action items",
+        "Plan a feature rollout checklist for V1",
+        "Rewrite this message to be clearer and shorter"
+    ]
 
     @StateObject private var viewModel: ChatViewModel
     @State private var selection: SidebarDestination? = .chat
@@ -55,34 +64,42 @@ struct ContentView: View {
             await reconcileRuntimeModelIfNeeded()
         }
 #if os(macOS)
-        .navigationSplitViewColumnWidth(min: 220, ideal: 260)
+        .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 220)
 #endif
     }
 
     private var sidebar: some View {
         List(selection: $selection) {
-            Section("Workspace") {
-                Label("Caice", systemImage: "sparkle")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
+            Section {
+                Button {
+                    viewModel.beginNewChat()
+                    selection = .chat
+                } label: {
+                    Label("New Chat", systemImage: "plus.circle.fill")
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+            }
 
+            Section {
                 NavigationLink(value: SidebarDestination.chat) {
                     sidebarRow(
-                        title: "Chat",
+                        title: "Chat Workspace",
                         subtitle: "\(viewModel.messages.count) messages",
                         systemImage: SidebarDestination.chat.systemImage
                     )
                 }
-            }
 
-            Section("Runtime") {
-                NavigationLink(value: SidebarDestination.runtime) {
+                NavigationLink(value: SidebarDestination.modelSettings) {
                     sidebarRow(
-                        title: runtime.providerName,
-                        subtitle: "Configured: \(runtime.modelName)",
-                        systemImage: SidebarDestination.runtime.systemImage
+                        title: "Model Settings",
+                        subtitle: runtime.modelName,
+                        systemImage: SidebarDestination.modelSettings.systemImage
                     )
                 }
+            } header: {
+                Text("Navigate")
             }
         }
         .navigationTitle("Caice")
@@ -104,23 +121,42 @@ struct ContentView: View {
         switch selection ?? .chat {
         case .chat:
             chatView
-        case .runtime:
+        case .modelSettings:
             providerDetailView
         }
     }
 
     private var chatView: some View {
         VStack(spacing: 0) {
+            ChatHeaderView(
+                title: "AI Workspace",
+                subtitle: viewModel.messages.isEmpty
+                    ? "Start with a prompt to begin a local conversation."
+                    : "Continue the conversation with \(runtime.modelName)."
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
             messagesSection
 
-            Divider()
-
             composerSection
-                .padding(12)
-                .background(.thinMaterial)
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 12)
         }
-        .navigationTitle("Chat")
+        .navigationTitle("Caice")
         .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem {
+                HStack(spacing: 10) {
+                    Label(runtime.modelName, systemImage: "cpu")
+                    Label(runtimeBadgeText, systemImage: runtimeBadgeSymbol)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
     }
 
     @ViewBuilder
@@ -171,7 +207,7 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("Runtime")
+        .navigationTitle("Model Settings")
     }
 
     private func runtimeLine(title: String, value: String) -> some View {
@@ -183,10 +219,10 @@ struct ContentView: View {
             ScrollView {
                 LazyVStack(spacing: 10) {
                     if viewModel.messages.isEmpty {
-                        Text("Start a conversation")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 40)
+                        HomeEmptyStateView(prompts: starterPrompts) { prompt in
+                            viewModel.prefillComposer(with: prompt)
+                        }
+                        .padding(.top, 12)
                     }
 
                     ForEach(viewModel.messages) { message in
@@ -215,42 +251,41 @@ struct ContentView: View {
     }
 
     private var composerSection: some View {
-        VStack(spacing: 8) {
-            if let errorText = viewModel.errorText {
-                Text(errorText)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            HStack(alignment: .bottom, spacing: 8) {
-                TextField("Message", text: $viewModel.composerText, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...5)
-
-                if viewModel.isSending {
-                    Button("Cancel") {
-                        viewModel.cancelCurrentSend()
-                    }
-                    .buttonStyle(.bordered)
+        ChatComposerView(
+            text: $viewModel.composerText,
+            isSending: viewModel.isSending,
+            errorText: viewModel.errorText,
+            modelName: runtime.modelName,
+            statusText: runtimeBadgeText,
+            onSend: {
+                Task {
+                    await viewModel.sendCurrentMessage()
                 }
-
-                Button {
-                    Task {
-                        await viewModel.sendCurrentMessage()
-                    }
-                } label: {
-                    if viewModel.isSending {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "paperplane.fill")
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isSending || viewModel.composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            },
+            onCancel: {
+                viewModel.cancelCurrentSend()
             }
+        )
+    }
+
+    private var runtimeBadgeText: String {
+        if viewModel.isSending {
+            return "Responding"
         }
+        if viewModel.errorText != nil {
+            return "Needs Attention"
+        }
+        return "Ready"
+    }
+
+    private var runtimeBadgeSymbol: String {
+        if viewModel.isSending {
+            return "arrow.triangle.2.circlepath"
+        }
+        if viewModel.errorText != nil {
+            return "exclamationmark.triangle"
+        }
+        return "checkmark.circle"
     }
 
     private func reconcileRuntimeModelIfNeeded() async {

@@ -107,6 +107,18 @@ final class ChatViewModel: ObservableObject {
         sendTask?.cancel()
     }
 
+    func beginNewChat() {
+        cancelCurrentSend()
+        messages = []
+        composerText = ""
+        errorText = nil
+        isSending = false
+    }
+
+    func prefillComposer(with text: String) {
+        composerText = text
+    }
+
     private func appendAssistantPlaceholder() -> UUID {
         let id = UUID()
         messages.append(ChatMessage(id: id, role: .assistant, text: ""))
