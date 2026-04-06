@@ -17,7 +17,6 @@
 - ChatService protocol
 - MockChatService
 - OllamaChatService
-- OpenAICompatibleChatService
 
 ## First feature path
 
