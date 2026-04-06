@@ -17,9 +17,9 @@ struct ContentView: View {
         var title: String {
             switch self {
             case .chat:
-                return "Home"
+                return "Chat"
             case .modelSettings:
-                return "Model Settings"
+                return "Models"
             }
         }
 
@@ -34,12 +34,10 @@ struct ContentView: View {
     }
 
     private let starterPrompts = [
-        "Brainstorm a product idea I can ship in two weekends",
-        "Help me debug a SwiftUI state update issue",
-        "Draft a concise, professional email",
-        "Summarize these notes into action items",
-        "Plan a feature rollout checklist for V1",
-        "Rewrite this message to be clearer and shorter"
+        "Brainstorm a product idea I can ship this month",
+        "Help me debug a SwiftUI state issue",
+        "Draft a concise professional email",
+        "Summarize these notes into action items"
     ]
 
     @StateObject private var viewModel: ChatViewModel
@@ -64,42 +62,36 @@ struct ContentView: View {
             await reconcileRuntimeModelIfNeeded()
         }
 #if os(macOS)
-        .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 220)
+        .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 200)
 #endif
     }
 
     private var sidebar: some View {
         List(selection: $selection) {
-            Section {
-                Button {
-                    viewModel.beginNewChat()
-                    selection = .chat
-                } label: {
-                    Label("New Chat", systemImage: "plus.circle.fill")
-                        .font(.headline)
-                }
-                .buttonStyle(.borderedProminent)
-                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+            Button {
+                viewModel.beginNewChat()
+                selection = .chat
+            } label: {
+                Label("New Chat", systemImage: "plus.circle.fill")
+                    .font(.headline)
+            }
+            .buttonStyle(.borderedProminent)
+            .listRowInsets(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
+
+            NavigationLink(value: SidebarDestination.chat) {
+                sidebarRow(
+                    title: "Chat",
+                    subtitle: "\(viewModel.messages.count) messages",
+                    systemImage: SidebarDestination.chat.systemImage
+                )
             }
 
-            Section {
-                NavigationLink(value: SidebarDestination.chat) {
-                    sidebarRow(
-                        title: "Chat Workspace",
-                        subtitle: "\(viewModel.messages.count) messages",
-                        systemImage: SidebarDestination.chat.systemImage
-                    )
-                }
-
-                NavigationLink(value: SidebarDestination.modelSettings) {
-                    sidebarRow(
-                        title: "Model Settings",
-                        subtitle: runtime.modelName,
-                        systemImage: SidebarDestination.modelSettings.systemImage
-                    )
-                }
-            } header: {
-                Text("Navigate")
+            NavigationLink(value: SidebarDestination.modelSettings) {
+                sidebarRow(
+                    title: "Models",
+                    subtitle: runtime.modelName,
+                    systemImage: SidebarDestination.modelSettings.systemImage
+                )
             }
         }
         .navigationTitle("Caice")
@@ -129,33 +121,46 @@ struct ContentView: View {
     private var chatView: some View {
         VStack(spacing: 0) {
             ChatHeaderView(
-                title: "AI Workspace",
-                subtitle: viewModel.messages.isEmpty
-                    ? "Start with a prompt to begin a local conversation."
-                    : "Continue the conversation with \(runtime.modelName)."
+                title: "Chat",
+                subtitle: "Local | \(runtime.modelName) | \(runtimeBadgeText)"
             )
             .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
 
+            if viewModel.messages.isEmpty {
+                emptyWorkspaceView
+            } else {
+                transcriptWorkspaceView
+            }
+        }
+        .navigationTitle("Chat")
+        .toolbarTitleDisplayMode(.inline)
+    }
+
+    private var emptyWorkspaceView: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HomeEmptyStateView(prompts: starterPrompts) { prompt in
+                viewModel.prefillComposer(with: prompt)
+            }
+
+            composerSection
+        }
+        .frame(maxWidth: 720)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 14)
+    }
+
+    private var transcriptWorkspaceView: some View {
+        VStack(spacing: 0) {
             messagesSection
 
             composerSection
                 .padding(.horizontal, 12)
                 .padding(.top, 10)
                 .padding(.bottom, 12)
-        }
-        .navigationTitle("Caice")
-        .toolbarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem {
-                HStack(spacing: 10) {
-                    Label(runtime.modelName, systemImage: "cpu")
-                    Label(runtimeBadgeText, systemImage: runtimeBadgeSymbol)
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
         }
     }
 
@@ -207,7 +212,7 @@ struct ContentView: View {
                 }
             }
         }
-        .navigationTitle("Model Settings")
+        .navigationTitle("Models")
     }
 
     private func runtimeLine(title: String, value: String) -> some View {
@@ -218,13 +223,6 @@ struct ContentView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 10) {
-                    if viewModel.messages.isEmpty {
-                        HomeEmptyStateView(prompts: starterPrompts) { prompt in
-                            viewModel.prefillComposer(with: prompt)
-                        }
-                        .padding(.top, 12)
-                    }
-
                     ForEach(viewModel.messages) { message in
                         MessageBubble(message: message)
                             .id(message.id)
@@ -255,8 +253,6 @@ struct ContentView: View {
             text: $viewModel.composerText,
             isSending: viewModel.isSending,
             errorText: viewModel.errorText,
-            modelName: runtime.modelName,
-            statusText: runtimeBadgeText,
             onSend: {
                 Task {
                     await viewModel.sendCurrentMessage()
@@ -276,16 +272,6 @@ struct ContentView: View {
             return "Needs Attention"
         }
         return "Ready"
-    }
-
-    private var runtimeBadgeSymbol: String {
-        if viewModel.isSending {
-            return "arrow.triangle.2.circlepath"
-        }
-        if viewModel.errorText != nil {
-            return "exclamationmark.triangle"
-        }
-        return "checkmark.circle"
     }
 
     private func reconcileRuntimeModelIfNeeded() async {

@@ -4,23 +4,11 @@ struct ChatComposerView: View {
     @Binding var text: String
     let isSending: Bool
     let errorText: String?
-    let modelName: String
-    let statusText: String
     let onSend: () -> Void
     let onCancel: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Label(modelName, systemImage: "cpu")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Label(statusText, systemImage: isSending ? "arrow.triangle.2.circlepath" : "checkmark.circle")
-                    .font(.caption)
-                    .foregroundStyle(isSending ? .blue : .secondary)
-            }
-
             if let errorText {
                 Text(errorText)
                     .font(.footnote)
@@ -32,8 +20,8 @@ struct ChatComposerView: View {
                 TextField("Ask Caice anything", text: $text, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(1...6)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 11)
                     .background(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color.secondary.opacity(0.12))
@@ -64,10 +52,14 @@ struct ChatComposerView: View {
                 .disabled(isSending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(12)
+        .padding(13)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.thinMaterial)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.secondary.opacity(0.18), lineWidth: 1)
         )
     }
 }

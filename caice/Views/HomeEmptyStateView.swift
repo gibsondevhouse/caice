@@ -5,32 +5,27 @@ struct HomeEmptyStateView: View {
     let onPromptSelected: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("What do you want to work on?")
-                    .font(.title.weight(.semibold))
-                Text("Chat with your local model to brainstorm, debug, write, or plan your next move.")
+                    .font(.title2.weight(.semibold))
+                Text("Start with a prompt and continue the conversation in one place.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
-            StarterPromptChipsView(prompts: prompts, onPromptSelected: onPromptSelected)
+            StarterPromptCardsView(prompts: prompts, onPromptSelected: onPromptSelected)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.thinMaterial)
-        )
+        .frame(maxWidth: 680, alignment: .leading)
     }
 }
 
-private struct StarterPromptChipsView: View {
+private struct StarterPromptCardsView: View {
     let prompts: [String]
     let onPromptSelected: (String) -> Void
 
     private let columns = [
-        GridItem(.adaptive(minimum: 180), spacing: 8, alignment: .leading)
+        GridItem(.adaptive(minimum: 240), spacing: 10, alignment: .leading)
     ]
 
     var body: some View {
@@ -44,8 +39,20 @@ private struct StarterPromptChipsView: View {
                     Button(prompt) {
                         onPromptSelected(prompt)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.plain)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.secondary.opacity(0.08))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
