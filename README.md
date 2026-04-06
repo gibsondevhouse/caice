@@ -44,7 +44,7 @@ The Ollama settings page reads the live local runtime state.
 
 - Installed models come from `GET /api/tags`
 - The page shows whether Ollama is offline, starting, or running
-- On macOS, you can start or restart Ollama directly from settings
+- On macOS, Connect/Reconnect re-checks Ollama API endpoint reachability from settings
 - You can select any installed model as the configured chat model directly from settings
 - The selected model is persisted and reused on next launch
 - If the configured model is not installed locally, the page warns you explicitly
