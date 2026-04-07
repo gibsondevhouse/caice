@@ -76,57 +76,19 @@ struct ContentView: View {
                 }
             )
         case .modelSettings:
-            providerDetailView
-        }
-    }
-
-    @ViewBuilder
-    private var providerDetailView: some View {
-        if runtime.provider == .ollama,
-           let endpointURL = runtime.endpointURL {
-            OllamaSettingsView(
-                endpointURL: endpointURL,
-                selectedModelName: runtime.modelName,
-                selectedContextWindowTokens: runtime.contextWindowTokens,
-                providerName: runtime.providerName,
-                statusSummary: runtime.statusSummary,
+            ProviderDetailPaneView(
+                runtime: runtime,
                 messageCount: viewModel.messages.count,
                 isSending: viewModel.isSending,
                 lastError: viewModel.errorText,
                 onSelectModel: { modelName in
-                    runtime = ChatRuntimeDescriptor(
-                        provider: runtime.provider,
-                        providerName: runtime.providerName,
-                        modelName: modelName,
-                        contextWindowTokens: runtime.contextWindowTokens,
-                        endpointURL: runtime.endpointURL,
-                        endpoint: runtime.endpoint,
-                        statusSummary: runtime.statusSummary
-                    )
+                    runtime = descriptor(overridingModel: modelName)
                     viewModel.updateModel(modelName)
                 },
                 onSelectContextWindow: { tokens in
-                    runtime = ChatRuntimeDescriptor(
-                        provider: runtime.provider,
-                        providerName: runtime.providerName,
-                        modelName: runtime.modelName,
-                        contextWindowTokens: tokens,
-                        endpointURL: runtime.endpointURL,
-                        endpoint: runtime.endpoint,
-                        statusSummary: runtime.statusSummary
-                    )
+                    runtime = descriptor(overridingContextWindow: tokens)
                     viewModel.updateContextWindow(tokens)
                 }
-            )
-        } else {
-            RuntimeSummaryView(
-                providerName: runtime.providerName,
-                modelName: runtime.modelName,
-                statusSummary: runtime.statusSummary,
-                endpoint: runtime.endpoint,
-                messageCount: viewModel.messages.count,
-                isSending: viewModel.isSending,
-                lastError: viewModel.errorText
             )
         }
     }
@@ -154,29 +116,21 @@ struct ContentView: View {
             return
         }
 
-        runtime = ChatRuntimeDescriptor(
+        runtime = descriptor(overridingModel: reconciledModel)
+    }
+
+    private func descriptor(
+        overridingModel modelName: String? = nil,
+        overridingContextWindow contextWindowTokens: Int?? = nil
+    ) -> ChatRuntimeDescriptor {
+        ChatRuntimeDescriptor(
             provider: runtime.provider,
             providerName: runtime.providerName,
-            modelName: reconciledModel,
-            contextWindowTokens: runtime.contextWindowTokens,
+            modelName: modelName ?? runtime.modelName,
+            contextWindowTokens: contextWindowTokens ?? runtime.contextWindowTokens,
             endpointURL: runtime.endpointURL,
             endpoint: runtime.endpoint,
             statusSummary: runtime.statusSummary
         )
     }
-}
-
-#Preview {
-    ContentView(
-        viewModel: ChatViewModel(service: MockChatService()),
-        runtime: ChatRuntimeDescriptor(
-            provider: .mock,
-            providerName: "Mock",
-            modelName: "Local Preview",
-            contextWindowTokens: nil,
-            endpointURL: nil,
-            endpoint: nil,
-            statusSummary: "UI-only mode"
-        )
-    )
 }

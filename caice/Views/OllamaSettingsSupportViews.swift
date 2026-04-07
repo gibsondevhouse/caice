@@ -29,7 +29,7 @@ struct ContextPresetButton: View {
 }
 
 struct OllamaModelCard: View {
-    let model: OllamaSettingsViewModel.ModelInfo
+    let model: OllamaModelInfo
     let isSelected: Bool
     let onSelect: () -> Void
 
