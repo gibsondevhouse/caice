@@ -95,6 +95,7 @@ struct ContentView: View {
 
             Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, 10)
         .padding(.vertical, 10)
         .navigationTitle("Caice")
@@ -138,16 +139,19 @@ struct ContentView: View {
             } else {
                 messagesSection
                     .frame(maxWidth: AppTheme.Layout.chatContentWidth)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.horizontal, 28)
             }
-
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             composerSection
                 .frame(maxWidth: AppTheme.Layout.chatContentWidth)
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 36)
                 .padding(.top, 10)
                 .padding(.bottom, 20)
+                .background(.clear)
         }
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
@@ -173,7 +177,7 @@ struct ContentView: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: AppTheme.Layout.chatContentWidth)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 36)
         .padding(.top, 8)
     }
