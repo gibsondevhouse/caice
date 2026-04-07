@@ -5,6 +5,47 @@ import Testing
 @Suite(.serialized)
 struct OllamaChatServiceTests {
 
+    @Test func configuredContextWindowIsSentInChatPayload() async throws {
+        let capturedNumCtx = LockedOptionalInt(nil)
+
+        let session = makeChatSession { request in
+            if request.url?.path == "/api/chat" {
+                if let body = requestBodyData(from: request),
+                   let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
+                   let options = json["options"] as? [String: Any],
+                   let numCtx = options["num_ctx"] as? Int {
+                    capturedNumCtx.set(numCtx)
+                }
+
+                return (
+                    200,
+                    """
+                    {"message":{"role":"assistant","content":"ok"},"done":true}
+                    """
+                )
+            }
+
+            return (404, "")
+        }
+
+        let service = OllamaChatService(
+            configuration: .init(
+                baseURL: try #require(URL(string: "http://localhost:11434")),
+                model: "qwen3.5:9b",
+                contextWindowTokens: 4096
+            ),
+            session: session
+        )
+
+        let response = try await service.send(
+            conversation: [ChatMessage(role: .user, text: "hello")],
+            newMessage: "hello"
+        )
+
+        #expect(response == "ok")
+        #expect(capturedNumCtx.get() == 4096)
+    }
+
     @Test func malformedStreamChunkIsIgnored() async throws {
         let session = makeChatSession { request in
             if request.url?.path == "/api/chat" {
@@ -172,4 +213,54 @@ private final class OllamaChatURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+}
+
+private final class LockedOptionalInt: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Int?
+
+    init(_ value: Int?) {
+        self.value = value
+    }
+
+    func get() -> Int? {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+
+    func set(_ newValue: Int?) {
+        lock.lock()
+        value = newValue
+        lock.unlock()
+    }
+}
+
+private func requestBodyData(from request: URLRequest) -> Data? {
+    if let body = request.httpBody {
+        return body
+    }
+
+    guard let bodyStream = request.httpBodyStream else {
+        return nil
+    }
+
+    bodyStream.open()
+    defer { bodyStream.close() }
+
+    var data = Data()
+    let bufferSize = 4096
+    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+    defer { buffer.deallocate() }
+
+    while bodyStream.hasBytesAvailable {
+        let bytesRead = bodyStream.read(buffer, maxLength: bufferSize)
+        if bytesRead > 0 {
+            data.append(buffer, count: bytesRead)
+        } else {
+            break
+        }
+    }
+
+    return data.isEmpty ? nil : data
 }

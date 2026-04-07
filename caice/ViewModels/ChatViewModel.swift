@@ -35,6 +35,19 @@ final class ChatViewModel: ObservableObject {
         service.updateModel(sanitized)
     }
 
+    func updateContextWindow(_ tokens: Int?) {
+        guard let tokens else {
+            defaults.removeObject(forKey: ChatServiceFactory.ollamaContextWindowDefaultsKey)
+            service.updateContextWindow(nil)
+            return
+        }
+
+        guard tokens >= 256 else { return }
+
+        defaults.set(tokens, forKey: ChatServiceFactory.ollamaContextWindowDefaultsKey)
+        service.updateContextWindow(tokens)
+    }
+
     func reconcileModelIfNeeded(endpointURL: URL, runtimeModelName: String) async -> String? {
         guard !didAttemptModelReconciliation else { return nil }
         didAttemptModelReconciliation = true

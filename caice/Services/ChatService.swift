@@ -2,6 +2,7 @@ import Foundation
 
 protocol ChatService: Sendable {
     func updateModel(_ model: String)
+    func updateContextWindow(_ tokens: Int?)
 
     func send(
         conversation: [ChatMessage],
@@ -18,6 +19,10 @@ protocol ChatService: Sendable {
 extension ChatService {
     func updateModel(_ model: String) {
         _ = model
+    }
+
+    func updateContextWindow(_ tokens: Int?) {
+        _ = tokens
     }
 
     func send(

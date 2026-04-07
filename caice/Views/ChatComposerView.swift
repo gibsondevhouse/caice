@@ -8,23 +8,30 @@ struct ChatComposerView: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
             if let errorText {
-                Text(errorText)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
+                AppErrorMessage(text: errorText)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            Text("Message")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
 
             HStack(alignment: .bottom, spacing: 8) {
                 TextField("Ask Caice anything", text: $text, axis: .vertical)
                     .textFieldStyle(.plain)
-                    .lineLimit(1...6)
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 11)
+                    .lineLimit(1...8)
+                    .font(.title3)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 15)
                     .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.secondary.opacity(0.12))
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
+                            .fill(AppTheme.Surface.subtleFill)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
+                            .strokeBorder(AppTheme.Surface.tileStroke, lineWidth: 1)
                     )
                     .submitLabel(.send)
                     .onSubmit {
@@ -36,6 +43,7 @@ struct ChatComposerView: View {
                         onCancel()
                     }
                     .buttonStyle(.bordered)
+                    .controlSize(.regular)
                 }
 
                 Button {
@@ -49,17 +57,24 @@ struct ChatComposerView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .disabled(isSending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(13)
+        .padding(AppTheme.Layout.cardPadding)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous)
+                .fill(.regularMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.secondary.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous)
+                .strokeBorder(AppTheme.Surface.stroke, lineWidth: 1)
+        )
+        .shadow(
+            color: AppTheme.Shadow.color,
+            radius: AppTheme.Shadow.radius,
+            x: AppTheme.Shadow.x,
+            y: AppTheme.Shadow.y
         )
     }
 }

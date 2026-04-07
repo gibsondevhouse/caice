@@ -9,6 +9,7 @@ struct ChatRuntimeDescriptor: Sendable {
     let provider: Provider
     let providerName: String
     let modelName: String
+    let contextWindowTokens: Int?
     let endpointURL: URL?
     let endpoint: String?
     let statusSummary: String
@@ -21,6 +22,7 @@ struct ChatServiceResolution {
 
 enum ChatServiceFactory {
     static let ollamaModelDefaultsKey = "caice.ollama.model"
+    static let ollamaContextWindowDefaultsKey = "caice.ollama.context_window"
     static let automaticModelLabel = "Auto"
 
     static func makeDefaultService(
@@ -43,6 +45,7 @@ enum ChatServiceFactory {
                     provider: .mock,
                     providerName: "Mock",
                     modelName: "Local Preview",
+                    contextWindowTokens: nil,
                     endpointURL: nil,
                     endpoint: nil,
                     statusSummary: "UI-only mode"
@@ -58,6 +61,7 @@ enum ChatServiceFactory {
                     provider: .mock,
                     providerName: "Mock",
                     modelName: "Local Preview",
+                    contextWindowTokens: nil,
                     endpointURL: nil,
                     endpoint: nil,
                     statusSummary: "Invalid Ollama URL, using mock"
@@ -67,12 +71,19 @@ enum ChatServiceFactory {
         let baseURL = normalizedOllamaBaseURL(parsedBaseURL)
 
         let explicitModel = resolvedEnvironment["CAICE_OLLAMA_MODEL"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let explicitContextWindow = parseContextWindow(from: resolvedEnvironment["CAICE_OLLAMA_CONTEXT_WINDOW"])
         let persistedModel: String?
+        let persistedContextWindow: Int?
         if environment == nil {
             persistedModel = defaults.string(forKey: ollamaModelDefaultsKey)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let persisted = defaults.integer(forKey: ollamaContextWindowDefaultsKey)
+            persistedContextWindow = persisted > 0 ? persisted : nil
         } else {
             persistedModel = nil
+            persistedContextWindow = nil
         }
+
+        let contextWindow = explicitContextWindow ?? persistedContextWindow
 
         let serviceModelName: String
         let runtimeModelName: String
@@ -89,7 +100,8 @@ enum ChatServiceFactory {
 
         let configuration = OllamaChatService.Configuration(
             baseURL: baseURL,
-            model: serviceModelName
+            model: serviceModelName,
+            contextWindowTokens: contextWindow
         )
 
         return ChatServiceResolution(
@@ -98,6 +110,7 @@ enum ChatServiceFactory {
                 provider: .ollama,
                 providerName: "Ollama",
                 modelName: runtimeModelName,
+                contextWindowTokens: contextWindow,
                 endpointURL: baseURL,
                 endpoint: baseURL.absoluteString,
                 statusSummary: "Local model runtime"
@@ -117,5 +130,15 @@ enum ChatServiceFactory {
         }
 
         return url
+    }
+
+    private static func parseContextWindow(from rawValue: String?) -> Int? {
+        guard let rawValue else { return nil }
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let parsed = Int(trimmed), parsed >= 256 else {
+            return nil
+        }
+
+        return parsed
     }
 }

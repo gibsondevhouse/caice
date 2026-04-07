@@ -5,18 +5,20 @@ struct HomeEmptyStateView: View {
     let onPromptSelected: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("What do you want to work on?")
-                    .font(.title2.weight(.semibold))
-                Text("Start with a prompt and continue the conversation in one place.")
-                    .font(.subheadline)
+                Text("What do you want to build today?")
+                    .font(AppTheme.Typography.heroTitle)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Use a starter or type your own prompt. Everything stays focused in chat.")
+                    .font(.title3.weight(.medium))
                     .foregroundStyle(.secondary)
             }
 
             StarterPromptCardsView(prompts: prompts, onPromptSelected: onPromptSelected)
         }
-        .frame(maxWidth: 680, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -25,35 +27,25 @@ private struct StarterPromptCardsView: View {
     let onPromptSelected: (String) -> Void
 
     private let columns = [
-        GridItem(.adaptive(minimum: 240), spacing: 10, alignment: .leading)
+        GridItem(.adaptive(minimum: 300), spacing: 12, alignment: .leading)
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Try one")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+            ForEach(prompts, id: \.self) { prompt in
+                AppActionTile(isSelected: false, action: {
+                    onPromptSelected(prompt)
+                }) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(prompt)
+                            .font(AppTheme.Typography.prominentBody)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
 
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                ForEach(prompts, id: \.self) { prompt in
-                    Button(prompt) {
-                        onPromptSelected(prompt)
+                        Text("Use prompt")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .font(.subheadline)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.secondary.opacity(0.08))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }

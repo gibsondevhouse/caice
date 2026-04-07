@@ -25,7 +25,7 @@ struct MessageBubble: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .background(bubbleColor)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.bubble, style: .continuous))
 
             if !isUser { Spacer(minLength: 32) }
         }

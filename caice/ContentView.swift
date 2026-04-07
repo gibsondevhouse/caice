@@ -62,50 +62,58 @@ struct ContentView: View {
             await reconcileRuntimeModelIfNeeded()
         }
 #if os(macOS)
-        .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 200)
+            .navigationSplitViewColumnWidth(min: 138, ideal: 154, max: 170)
 #endif
     }
 
     private var sidebar: some View {
-        List(selection: $selection) {
+        VStack(alignment: .leading, spacing: 10) {
             Button {
                 viewModel.beginNewChat()
                 selection = .chat
             } label: {
                 Label("New Chat", systemImage: "plus.circle.fill")
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.borderedProminent)
-            .listRowInsets(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
 
-            NavigationLink(value: SidebarDestination.chat) {
-                sidebarRow(
-                    title: "Chat",
-                    subtitle: "\(viewModel.messages.count) messages",
-                    systemImage: SidebarDestination.chat.systemImage
-                )
-            }
+            Divider()
+                .opacity(0.35)
 
-            NavigationLink(value: SidebarDestination.modelSettings) {
-                sidebarRow(
-                    title: "Models",
-                    subtitle: runtime.modelName,
-                    systemImage: SidebarDestination.modelSettings.systemImage
-                )
-            }
+            sidebarDestinationButton(
+                destination: .chat,
+                title: "Chat",
+                subtitle: viewModel.messages.isEmpty ? "No messages" : "\(viewModel.messages.count) messages"
+            )
+
+            sidebarDestinationButton(
+                destination: .modelSettings,
+                title: "Models",
+                subtitle: runtime.modelName
+            )
+
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .navigationTitle("Caice")
-        .listStyle(.sidebar)
     }
 
-    private func sidebarRow(title: String, subtitle: String, systemImage: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Label(title, systemImage: systemImage)
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 2)
+    private func sidebarDestinationButton(
+        destination: SidebarDestination,
+        title: String,
+        subtitle: String
+    ) -> some View {
+        AppSidebarRow(
+            title: title,
+            subtitle: subtitle,
+            systemImage: destination.systemImage,
+            isSelected: selection == destination,
+            action: {
+                selection = destination
+            }
+        )
     }
 
     @ViewBuilder
@@ -120,13 +128,10 @@ struct ContentView: View {
 
     private var chatView: some View {
         VStack(spacing: 0) {
-            ChatHeaderView(
-                title: "Chat",
-                subtitle: "Local | \(runtime.modelName) | \(runtimeBadgeText)"
-            )
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
+            workspaceHeader
+                .padding(.horizontal, 36)
+                .padding(.top, 30)
+                .padding(.bottom, 8)
 
             if viewModel.messages.isEmpty {
                 emptyWorkspaceView
@@ -134,8 +139,19 @@ struct ContentView: View {
                 transcriptWorkspaceView
             }
         }
-        .navigationTitle("Chat")
+        .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
+    }
+
+    private var workspaceHeader: some View {
+        AppPageHeader(
+            title: "Chat",
+            subtitle: "Local | \(runtime.modelName) | \(runtimeBadgeText)",
+            titleFont: .largeTitle.weight(.semibold),
+            subtitleFont: .subheadline
+        )
+        .frame(maxWidth: AppTheme.Layout.chatContentWidth, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var emptyWorkspaceView: some View {
@@ -146,21 +162,27 @@ struct ContentView: View {
 
             composerSection
         }
-        .frame(maxWidth: 720)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.horizontal, 16)
-        .padding(.top, 6)
-        .padding(.bottom, 14)
+        .frame(maxWidth: AppTheme.Layout.chatContentWidth)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 36)
+        .padding(.top, 8)
+        .padding(.bottom, 30)
+        .frame(maxHeight: .infinity, alignment: .center)
     }
 
     private var transcriptWorkspaceView: some View {
         VStack(spacing: 0) {
             messagesSection
+                .frame(maxWidth: AppTheme.Layout.chatContentWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 28)
 
             composerSection
-                .padding(.horizontal, 12)
+                .frame(maxWidth: AppTheme.Layout.chatContentWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 36)
                 .padding(.top, 10)
-                .padding(.bottom, 12)
+                .padding(.bottom, 20)
         }
     }
 
@@ -171,6 +193,7 @@ struct ContentView: View {
             OllamaSettingsView(
                 endpointURL: endpointURL,
                 selectedModelName: runtime.modelName,
+                selectedContextWindowTokens: runtime.contextWindowTokens,
                 providerName: runtime.providerName,
                 statusSummary: runtime.statusSummary,
                 messageCount: viewModel.messages.count,
@@ -181,42 +204,37 @@ struct ContentView: View {
                         provider: runtime.provider,
                         providerName: runtime.providerName,
                         modelName: modelName,
+                        contextWindowTokens: runtime.contextWindowTokens,
                         endpointURL: runtime.endpointURL,
                         endpoint: runtime.endpoint,
                         statusSummary: runtime.statusSummary
                     )
                     viewModel.updateModel(modelName)
+                },
+                onSelectContextWindow: { tokens in
+                    runtime = ChatRuntimeDescriptor(
+                        provider: runtime.provider,
+                        providerName: runtime.providerName,
+                        modelName: runtime.modelName,
+                        contextWindowTokens: tokens,
+                        endpointURL: runtime.endpointURL,
+                        endpoint: runtime.endpoint,
+                        statusSummary: runtime.statusSummary
+                    )
+                    viewModel.updateContextWindow(tokens)
                 }
             )
         } else {
-            runtimeView
+            RuntimeSummaryView(
+                providerName: runtime.providerName,
+                modelName: runtime.modelName,
+                statusSummary: runtime.statusSummary,
+                endpoint: runtime.endpoint,
+                messageCount: viewModel.messages.count,
+                isSending: viewModel.isSending,
+                lastError: viewModel.errorText
+            )
         }
-    }
-
-    private var runtimeView: some View {
-        List {
-            Section("Provider") {
-                runtimeLine(title: "Backend", value: runtime.providerName)
-                runtimeLine(title: "Model", value: runtime.modelName)
-                runtimeLine(title: "Status", value: runtime.statusSummary)
-                if let endpoint = runtime.endpoint {
-                    runtimeLine(title: "Endpoint", value: endpoint)
-                }
-            }
-
-            Section("Conversation") {
-                runtimeLine(title: "Messages", value: "\(viewModel.messages.count)")
-                runtimeLine(title: "Sending", value: viewModel.isSending ? "In progress" : "Idle")
-                if let errorText = viewModel.errorText {
-                    runtimeLine(title: "Last Error", value: errorText)
-                }
-            }
-        }
-        .navigationTitle("Models")
-    }
-
-    private func runtimeLine(title: String, value: String) -> some View {
-        LabeledContent(title, value: value)
     }
 
     private var messagesSection: some View {
@@ -228,7 +246,7 @@ struct ContentView: View {
                             .id(message.id)
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 0)
                 .padding(.vertical, 16)
             }
             .onChange(of: viewModel.messages.count) {
@@ -291,6 +309,7 @@ struct ContentView: View {
             provider: runtime.provider,
             providerName: runtime.providerName,
             modelName: reconciledModel,
+            contextWindowTokens: runtime.contextWindowTokens,
             endpointURL: runtime.endpointURL,
             endpoint: runtime.endpoint,
             statusSummary: runtime.statusSummary
@@ -305,6 +324,7 @@ struct ContentView: View {
             provider: .mock,
             providerName: "Mock",
             modelName: "Local Preview",
+            contextWindowTokens: nil,
             endpointURL: nil,
             endpoint: nil,
             statusSummary: "UI-only mode"

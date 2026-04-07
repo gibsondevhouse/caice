@@ -6,10 +6,12 @@ final class OllamaChatService: ChatService {
     struct Configuration: Sendable {
         let baseURL: URL
         let model: String
+        let contextWindowTokens: Int?
 
-        init(baseURL: URL, model: String) {
+        init(baseURL: URL, model: String, contextWindowTokens: Int? = nil) {
             self.baseURL = baseURL
             self.model = model
+            self.contextWindowTokens = contextWindowTokens
         }
     }
 
@@ -37,6 +39,7 @@ final class OllamaChatService: ChatService {
     private let session: URLSession
     private let lock = NSLock()
     private var configuredModelName: String
+    private var configuredContextWindowTokens: Int?
 
     init(
         configuration: Configuration,
@@ -44,6 +47,7 @@ final class OllamaChatService: ChatService {
     ) {
         self.baseURL = configuration.baseURL
         self.configuredModelName = configuration.model
+        self.configuredContextWindowTokens = configuration.contextWindowTokens
         self.session = session
     }
 
@@ -53,6 +57,16 @@ final class OllamaChatService: ChatService {
 
         lock.lock()
         configuredModelName = sanitized
+        lock.unlock()
+    }
+
+    func updateContextWindow(_ tokens: Int?) {
+        if let tokens, tokens < 256 {
+            return
+        }
+
+        lock.lock()
+        configuredContextWindowTokens = tokens
         lock.unlock()
     }
 
@@ -84,6 +98,7 @@ final class OllamaChatService: ChatService {
         let payload = OllamaRequestPayload(
             model: modelName,
             stream: true,
+            options: OllamaRequestPayload.Options(numCtx: currentContextWindowTokens()),
             messages: conversation.map { message in
                 OllamaRequestPayload.Message(role: message.role.rawValue, content: message.text)
             }
@@ -161,6 +176,12 @@ final class OllamaChatService: ChatService {
         return configuredModelName
     }
 
+    private func currentContextWindowTokens() -> Int? {
+        lock.lock()
+        defer { lock.unlock() }
+        return configuredContextWindowTokens
+    }
+
     private func resolveModelNameForRequest() async throws -> String {
         let configured = currentModelName()
         if configured != Self.autoModelMarker {
@@ -224,8 +245,17 @@ private struct OllamaRequestPayload: Encodable {
         let content: String
     }
 
+    struct Options: Encodable {
+        let numCtx: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case numCtx = "num_ctx"
+        }
+    }
+
     let model: String
     let stream: Bool
+    let options: Options?
     let messages: [Message]
 }
 
