@@ -438,7 +438,8 @@ struct AppComponentsPreview: View {
     }
 }
 
-#Preview("Design System Components", traits: .fixedLayout(width: 600, height: 1200)) {
+#Preview {
     AppComponentsPreview()
+        .frame(width: 600, height: 1200)
 }
 #endif
