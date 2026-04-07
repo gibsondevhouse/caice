@@ -134,10 +134,20 @@ struct ContentView: View {
                 .padding(.bottom, 8)
 
             if viewModel.messages.isEmpty {
-                emptyWorkspaceView
+                emptyWorkspaceContent
             } else {
-                transcriptWorkspaceView
+                messagesSection
+                    .frame(maxWidth: AppTheme.Layout.chatContentWidth)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 28)
             }
+
+            composerSection
+                .frame(maxWidth: AppTheme.Layout.chatContentWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 36)
+                .padding(.top, 10)
+                .padding(.bottom, 20)
         }
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
@@ -154,36 +164,18 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var emptyWorkspaceView: some View {
+    private var emptyWorkspaceContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             HomeEmptyStateView(prompts: starterPrompts) { prompt in
                 viewModel.prefillComposer(with: prompt)
             }
 
-            composerSection
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: AppTheme.Layout.chatContentWidth)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 36)
         .padding(.top, 8)
-        .padding(.bottom, 30)
-        .frame(maxHeight: .infinity, alignment: .center)
-    }
-
-    private var transcriptWorkspaceView: some View {
-        VStack(spacing: 0) {
-            messagesSection
-                .frame(maxWidth: AppTheme.Layout.chatContentWidth)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 28)
-
-            composerSection
-                .frame(maxWidth: AppTheme.Layout.chatContentWidth)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 36)
-                .padding(.top, 10)
-                .padding(.bottom, 20)
-        }
     }
 
     @ViewBuilder
