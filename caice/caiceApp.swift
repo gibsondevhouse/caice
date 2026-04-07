@@ -17,6 +17,10 @@ struct caiceApp: App {
                 viewModel: ChatViewModel(service: resolution.service),
                 runtime: resolution.runtime
             )
+            .frame(minWidth: 980, minHeight: 640)
         }
+#if os(macOS)
+        .defaultSize(width: 1220, height: 780)
+#endif
     }
 }

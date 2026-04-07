@@ -8,31 +8,6 @@
 import SwiftUI
 
 struct ContentView: View {
-    private enum SidebarDestination: String, CaseIterable, Hashable, Identifiable {
-        case chat
-        case modelSettings
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .chat:
-                return "Chat"
-            case .modelSettings:
-                return "Models"
-            }
-        }
-
-        var systemImage: String {
-            switch self {
-            case .chat:
-                return "bubble.left.and.bubble.right.fill"
-            case .modelSettings:
-                return "slider.horizontal.3"
-            }
-        }
-    }
-
     private let starterPrompts = [
         "Brainstorm a product idea I can ship this month",
         "Help me debug a SwiftUI state issue",
@@ -41,7 +16,7 @@ struct ContentView: View {
     ]
 
     @StateObject private var viewModel: ChatViewModel
-    @State private var selection: SidebarDestination? = .chat
+    @State private var selection: AppDestination? = .chat
     @State private var runtime: ChatRuntimeDescriptor
 
     init(
@@ -54,9 +29,18 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            sidebar
+            AppSidebarView(
+                selection: $selection,
+                messageCount: viewModel.messages.count,
+                runtimeModelName: runtime.modelName,
+                onNewChat: {
+                    viewModel.beginNewChat()
+                }
+            )
         } detail: {
             detailContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(AppTheme.Surface.windowBackground)
         }
         .task {
             await reconcileRuntimeModelIfNeeded()
@@ -66,120 +50,34 @@ struct ContentView: View {
 #endif
     }
 
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Button {
-                viewModel.beginNewChat()
-                selection = .chat
-            } label: {
-                Label("New Chat", systemImage: "plus.circle.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.borderedProminent)
-
-            Divider()
-                .opacity(0.35)
-
-            sidebarDestinationButton(
-                destination: .chat,
-                title: "Chat",
-                subtitle: viewModel.messages.isEmpty ? "No messages" : "\(viewModel.messages.count) messages"
-            )
-
-            sidebarDestinationButton(
-                destination: .modelSettings,
-                title: "Models",
-                subtitle: runtime.modelName
-            )
-
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 10)
-        .navigationTitle("Caice")
-    }
-
-    private func sidebarDestinationButton(
-        destination: SidebarDestination,
-        title: String,
-        subtitle: String
-    ) -> some View {
-        AppSidebarRow(
-            title: title,
-            subtitle: subtitle,
-            systemImage: destination.systemImage,
-            isSelected: selection == destination,
-            action: {
-                selection = destination
-            }
-        )
-    }
-
     @ViewBuilder
     private var detailContent: some View {
         switch selection ?? .chat {
         case .chat:
-            chatView
+            ChatWorkspaceView(
+                runtimeModelName: runtime.modelName,
+                runtimeBadgeText: runtimeBadgeText,
+                starterPrompts: starterPrompts,
+                messages: viewModel.messages,
+                streamingRevision: viewModel.streamingRevision,
+                composerText: $viewModel.composerText,
+                isSending: viewModel.isSending,
+                errorText: viewModel.errorText,
+                onPromptSelected: { prompt in
+                    viewModel.prefillComposer(with: prompt)
+                },
+                onSend: {
+                    Task {
+                        await viewModel.sendCurrentMessage()
+                    }
+                },
+                onCancel: {
+                    viewModel.cancelCurrentSend()
+                }
+            )
         case .modelSettings:
             providerDetailView
         }
-    }
-
-    private var chatView: some View {
-        VStack(spacing: 0) {
-            workspaceHeader
-                .padding(.horizontal, 36)
-                .padding(.top, 30)
-                .padding(.bottom, 8)
-
-            if viewModel.messages.isEmpty {
-                emptyWorkspaceContent
-            } else {
-                messagesSection
-                    .frame(maxWidth: AppTheme.Layout.chatContentWidth)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 28)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            composerSection
-                .frame(maxWidth: AppTheme.Layout.chatContentWidth)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 36)
-                .padding(.top, 10)
-                .padding(.bottom, 20)
-                .background(.clear)
-        }
-        .navigationTitle("")
-        .toolbarTitleDisplayMode(.inline)
-    }
-
-    private var workspaceHeader: some View {
-        AppPageHeader(
-            title: "Chat",
-            subtitle: "Local | \(runtime.modelName) | \(runtimeBadgeText)",
-            titleFont: .largeTitle.weight(.semibold),
-            subtitleFont: .subheadline
-        )
-        .frame(maxWidth: AppTheme.Layout.chatContentWidth, alignment: .leading)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var emptyWorkspaceContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HomeEmptyStateView(prompts: starterPrompts) { prompt in
-                viewModel.prefillComposer(with: prompt)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: AppTheme.Layout.chatContentWidth)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.horizontal, 36)
-        .padding(.top, 8)
     }
 
     @ViewBuilder
@@ -231,51 +129,6 @@ struct ContentView: View {
                 lastError: viewModel.errorText
             )
         }
-    }
-
-    private var messagesSection: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 10) {
-                    ForEach(viewModel.messages) { message in
-                        MessageBubble(message: message)
-                            .id(message.id)
-                    }
-                }
-                .padding(.horizontal, 0)
-                .padding(.vertical, 16)
-            }
-            .onChange(of: viewModel.messages.count) {
-                if let lastID = viewModel.messages.last?.id {
-                    withAnimation {
-                        proxy.scrollTo(lastID, anchor: .bottom)
-                    }
-                }
-            }
-            .onChange(of: viewModel.streamingRevision) {
-                if let lastID = viewModel.messages.last?.id {
-                    withAnimation {
-                        proxy.scrollTo(lastID, anchor: .bottom)
-                    }
-                }
-            }
-        }
-    }
-
-    private var composerSection: some View {
-        ChatComposerView(
-            text: $viewModel.composerText,
-            isSending: viewModel.isSending,
-            errorText: viewModel.errorText,
-            onSend: {
-                Task {
-                    await viewModel.sendCurrentMessage()
-                }
-            },
-            onCancel: {
-                viewModel.cancelCurrentSend()
-            }
-        )
     }
 
     private var runtimeBadgeText: String {
