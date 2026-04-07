@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ChatComposerView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     @Binding var text: String
     let isSending: Bool
     let errorText: String?
@@ -8,60 +10,77 @@ struct ChatComposerView: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             if let errorText {
                 AppErrorMessage(text: errorText)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Text("Message")
-                .font(.caption.weight(.semibold))
+            Text("Compose")
+                .font(AppTheme.Typography.captionStrong)
                 .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.8)
 
-            HStack(alignment: .bottom, spacing: 8) {
-                TextField("Ask Caice anything", text: $text, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .lineLimit(1...8)
-                    .font(.title3)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 15)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
-                            .fill(AppTheme.Surface.subtleFill)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
-                            .strokeBorder(AppTheme.Surface.tileStroke, lineWidth: 1)
-                    )
-                    .submitLabel(.send)
-                    .onSubmit {
-                        onSend()
-                    }
+            if isCompactLayout {
+                VStack(alignment: .leading, spacing: 10) {
+                    composerField
 
-                if isSending {
-                    Button("Cancel") {
-                        onCancel()
+                    HStack(spacing: 8) {
+                        if isSending {
+                            Button("Cancel") {
+                                onCancel()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                        }
+
+                        Spacer(minLength: 0)
+
+                        Button {
+                            onSend()
+                        } label: {
+                            if isSending {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Label("Send", systemImage: "paperplane.fill")
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.regular)
+                        .disabled(isSending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
                 }
+            } else {
+                HStack(alignment: .bottom, spacing: 8) {
+                    composerField
 
-                Button {
-                    onSend()
-                } label: {
                     if isSending {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "paperplane.fill")
+                        Button("Cancel") {
+                            onCancel()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
                     }
+
+                    Button {
+                        onSend()
+                    } label: {
+                        if isSending {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "paperplane.fill")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(isSending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(isSending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(AppTheme.Layout.cardPadding)
+        .padding(isCompactLayout ? 18 : AppTheme.Layout.cardPadding)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous)
                 .fill(.regularMaterial)
@@ -76,5 +95,30 @@ struct ChatComposerView: View {
             x: AppTheme.Shadow.x,
             y: AppTheme.Shadow.y
         )
+    }
+
+    private var composerField: some View {
+        TextField("Ask Caice anything", text: $text, axis: .vertical)
+            .textFieldStyle(.plain)
+            .lineLimit(1...8)
+            .font(.body)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
+                    .fill(AppTheme.Surface.elevatedFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
+                    .strokeBorder(AppTheme.Surface.emphasisStroke, lineWidth: 1)
+            )
+            .submitLabel(.send)
+            .onSubmit {
+                onSend()
+            }
+    }
+
+    private var isCompactLayout: Bool {
+        horizontalSizeClass == .compact
     }
 }

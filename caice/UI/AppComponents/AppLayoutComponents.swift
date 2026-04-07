@@ -7,17 +7,20 @@ struct AppPageHeader: View {
     var subtitleFont: Font = AppTheme.Typography.pageSubtitle
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(titleFont)
+                .lineSpacing(2)
 
             if let subtitle {
                 Text(subtitle)
                     .font(subtitleFont)
                     .foregroundStyle(.secondary)
+                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -27,15 +30,17 @@ struct AppSection<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(AppTheme.Typography.sectionTitle)
+                    .lineSpacing(1.5)
 
                 if let subtitle {
                     Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -63,7 +68,11 @@ struct AppCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous)
-                    .fill(.regularMaterial)
+                    .fill(.thinMaterial)
+            )
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous)
+                    .fill(AppTheme.Surface.panelBackground.opacity(0.55))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.card, style: .continuous)

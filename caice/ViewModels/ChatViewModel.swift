@@ -3,10 +3,10 @@ import Combine
 
 @MainActor
 final class ChatViewModel: ObservableObject {
-    @Published internal(set) var messages: [ChatMessage]
+    @Published var messages: [ChatMessage]
     @Published var composerText: String = ""
-    @Published internal(set) var isSending: Bool = false
-    @Published internal(set) var streamingRevision: Int = 0
+    @Published var isSending: Bool = false
+    @Published var streamingRevision: Int = 0
     @Published var errorText: String?
 
     let service: ChatService

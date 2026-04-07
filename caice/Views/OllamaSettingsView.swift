@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct OllamaSettingsView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     @StateObject var viewModel: OllamaSettingsViewModel
     @State var contextWindowText: String
     @State var isAdvancedExpanded = false
@@ -50,8 +52,8 @@ struct OllamaSettingsView: View {
                 advancedSection
             }
             .frame(maxWidth: AppTheme.Layout.settingsContentWidth, alignment: .leading)
-            .padding(.horizontal, AppTheme.Layout.pageHorizontalPadding)
-            .padding(.vertical, AppTheme.Layout.pageVerticalPadding)
+            .padding(.horizontal, isCompactLayout ? 16 : AppTheme.Layout.pageHorizontalPadding)
+            .padding(.vertical, isCompactLayout ? 20 : AppTheme.Layout.pageVerticalPadding)
             .frame(maxWidth: .infinity)
         }
         .background(AppTheme.Surface.windowBackground)
@@ -70,6 +72,10 @@ struct OllamaSettingsView: View {
                 }
             }
         }
+    }
+
+    private var isCompactLayout: Bool {
+        horizontalSizeClass == .compact
     }
 
 }

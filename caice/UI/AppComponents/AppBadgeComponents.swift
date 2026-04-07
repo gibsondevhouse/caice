@@ -18,15 +18,15 @@ struct AppStatusBadge: View {
                 .font(.subheadline.weight(.semibold))
         }
         .foregroundStyle(color)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 7)
         .background(
             Capsule(style: .continuous)
-                .fill(color.opacity(0.12))
+                .fill(color.opacity(0.14))
         )
         .overlay(
             Capsule(style: .continuous)
-                .strokeBorder(color.opacity(0.22), lineWidth: 1)
+                .strokeBorder(color.opacity(0.24), lineWidth: 1)
         )
     }
 }

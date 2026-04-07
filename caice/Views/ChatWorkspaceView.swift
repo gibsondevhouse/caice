@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ChatWorkspaceView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     let runtimeModelName: String
     let runtimeBadgeText: String
     let starterPrompts: [String]
@@ -18,14 +20,14 @@ struct ChatWorkspaceView: View {
             AppPageHeader(
                 title: "Chat",
                 subtitle: "Local | \(runtimeModelName) | \(runtimeBadgeText)",
-                titleFont: .largeTitle.weight(.semibold),
+                titleFont: isCompactLayout ? .title2.weight(.semibold) : AppTheme.Typography.pageTitle,
                 subtitleFont: .subheadline
             )
             .frame(maxWidth: AppTheme.Layout.chatContentWidth, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 36)
-            .padding(.top, 30)
-            .padding(.bottom, 8)
+            .padding(.horizontal, contentGutter)
+            .padding(.top, isCompactLayout ? 20 : AppTheme.Layout.pageVerticalPadding)
+            .padding(.bottom, 10)
 
             if messages.isEmpty {
                 emptyContent
@@ -44,9 +46,9 @@ struct ChatWorkspaceView: View {
             )
             .frame(maxWidth: AppTheme.Layout.chatContentWidth)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, 36)
-            .padding(.top, 10)
-            .padding(.bottom, 20)
+            .padding(.horizontal, contentGutter)
+            .padding(.top, 12)
+            .padding(.bottom, isCompactLayout ? 14 : 22)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .navigationTitle("")
@@ -60,24 +62,28 @@ struct ChatWorkspaceView: View {
         }
         .frame(maxWidth: AppTheme.Layout.chatContentWidth, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .top)
-        .padding(.horizontal, 36)
-        .padding(.top, 8)
+        .padding(.horizontal, contentGutter)
+        .padding(.top, 10)
     }
 
     private var transcriptContent: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 10) {
-                    ForEach(messages) { message in
-                        MessageBubble(message: message)
-                            .id(message.id)
+            AppCard(padding: 0) {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(messages) { message in
+                            MessageBubble(message: message)
+                                .id(message.id)
+                        }
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
                 }
-                .padding(.vertical, 16)
             }
+            .frame(minHeight: isCompactLayout ? 240 : 320)
             .frame(maxWidth: AppTheme.Layout.chatContentWidth)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, 28)
+            .padding(.horizontal, contentGutter)
             .onChange(of: messages.count) {
                 scrollToLatest(proxy)
             }
@@ -95,5 +101,13 @@ struct ChatWorkspaceView: View {
         withAnimation {
             proxy.scrollTo(lastID, anchor: .bottom)
         }
+    }
+
+    private var isCompactLayout: Bool {
+        horizontalSizeClass == .compact
+    }
+
+    private var contentGutter: CGFloat {
+        isCompactLayout ? 16 : AppTheme.Layout.contentGutter
     }
 }

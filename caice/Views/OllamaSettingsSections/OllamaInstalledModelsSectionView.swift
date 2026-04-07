@@ -31,7 +31,7 @@ struct OllamaInstalledModelsSectionView: View {
                     .padding(.vertical, 18)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 16) {
                     ForEach(availableModels) { model in
                         OllamaModelCard(
                             model: model,

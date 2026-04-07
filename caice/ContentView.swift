@@ -29,25 +29,44 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            AppSidebarView(
-                selection: $selection,
-                messageCount: viewModel.messages.count,
-                runtimeModelName: runtime.modelName,
-                onNewChat: {
-                    viewModel.beginNewChat()
-                }
-            )
+            sidebarContent
         } detail: {
-            detailContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(AppTheme.Surface.windowBackground)
+            detailPane
+        }
+#if os(macOS)
+        .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+        .navigationSplitViewStyle(.automatic)
+#endif
+        .onAppear {
+            if selection == nil {
+                selection = .chat
+            }
+        }
+        .onChange(of: selection) {
+            if selection == nil {
+                selection = .chat
+            }
         }
         .task {
             await reconcileRuntimeModelIfNeeded()
         }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 138, ideal: 154, max: 170)
-#endif
+    }
+
+    private var sidebarContent: some View {
+        AppSidebarView(
+            selection: $selection,
+            messageCount: viewModel.messages.count,
+            runtimeModelName: runtime.modelName,
+            onNewChat: {
+                viewModel.beginNewChat()
+            }
+        )
+    }
+
+    private var detailPane: some View {
+        detailContent
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(AppTheme.Surface.windowBackground)
     }
 
     @ViewBuilder

@@ -26,7 +26,7 @@ struct AppInlineNotice: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
-                .fill(tint.opacity(0.08))
+                .fill(tint.opacity(0.1))
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
@@ -53,7 +53,7 @@ struct AppSuccessMessage: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
-                .fill(AppTheme.Accent.success.opacity(0.08))
+                .fill(AppTheme.Accent.success.opacity(0.1))
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
@@ -80,7 +80,7 @@ struct AppErrorMessage: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)
-                .fill(AppTheme.Accent.critical.opacity(0.08))
+                .fill(AppTheme.Accent.critical.opacity(0.1))
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.CornerRadius.compactTile, style: .continuous)

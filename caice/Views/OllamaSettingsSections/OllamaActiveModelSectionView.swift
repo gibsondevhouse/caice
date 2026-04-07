@@ -19,11 +19,13 @@ struct OllamaActiveModelSectionView: View {
                     HStack(alignment: .top, spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(selectedModelName)
-                                .font(.system(size: 28, weight: .semibold))
+                                .font(.system(size: 30, weight: .semibold, design: .rounded))
+                                .lineLimit(2)
 
                             Text(activeContextSummary)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .lineSpacing(2)
                         }
 
                         Spacer(minLength: 12)
@@ -67,6 +69,7 @@ struct OllamaActiveModelSectionView: View {
                                 Text("Use a smaller window for faster responses and lower memory pressure.")
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
+                                    .lineSpacing(2)
                             }
 
                             Spacer(minLength: 16)
@@ -95,6 +98,7 @@ struct OllamaActiveModelSectionView: View {
                         Text("Lower settings like 4K or 8K keep Qwen responsive on 16 GB Macs. Larger windows preserve more history but raise KV cache memory and can force CPU spillover.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                            .lineSpacing(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }

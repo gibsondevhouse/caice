@@ -10,10 +10,10 @@ struct AppActionTile<Content: View>: View {
             content
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, AppTheme.Layout.tilePadding)
-                .padding(.vertical, 12)
+                .padding(.vertical, AppTheme.Layout.compactTilePadding)
                 .background(
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.tile, style: .continuous)
-                        .fill(isSelected ? Color.accentColor.opacity(0.12) : AppTheme.Surface.subtleFill)
+                        .fill(isSelected ? Color.accentColor.opacity(0.14) : AppTheme.Surface.subtleFill)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.tile, style: .continuous)
@@ -21,6 +21,7 @@ struct AppActionTile<Content: View>: View {
                 )
         }
         .buttonStyle(.plain)
+        .contentShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.tile, style: .continuous))
     }
 }
 
@@ -42,11 +43,15 @@ struct AppSidebarRow: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.sidebarTile, style: .continuous)
+                    .fill(isSelected ? Color.accentColor.opacity(0.16) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.sidebarTile, style: .continuous)
+                    .strokeBorder(isSelected ? Color.accentColor.opacity(0.32) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

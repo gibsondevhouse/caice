@@ -25,7 +25,7 @@ struct OllamaConnectionSectionView: View {
     var body: some View {
         AppSection(title: "Connection", subtitle: "Current runtime status and endpoint health.") {
             AppCard {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 20) {
                     HStack(alignment: .top, spacing: 16) {
                         VStack(alignment: .leading, spacing: 10) {
                             AppStatusBadge(
@@ -38,6 +38,7 @@ struct OllamaConnectionSectionView: View {
                                 Text(statusDetailText)
                                     .font(.body)
                                     .foregroundStyle(.secondary)
+                                    .lineSpacing(2)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }

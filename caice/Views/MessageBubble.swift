@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MessageBubble: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     let message: ChatMessage
 
     private var isUser: Bool {
@@ -8,27 +10,51 @@ struct MessageBubble: View {
     }
 
     private var bubbleColor: Color {
-        isUser ? .accentColor : Color.secondary.opacity(0.18)
+        isUser ? .accentColor : AppTheme.Surface.subtleFill
     }
 
     private var textColor: Color {
         isUser ? .white : .primary
     }
 
+    private var roleLabel: String {
+        isUser ? "You" : "Caice"
+    }
+
     var body: some View {
-        HStack {
-            if isUser { Spacer(minLength: 32) }
+        VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
+            Text(roleLabel)
+                .font(AppTheme.Typography.captionStrong)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.7)
 
-            Text(message.text)
-                .font(.body)
-                .foregroundStyle(textColor)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(bubbleColor)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.bubble, style: .continuous))
+            HStack {
+                if isUser { Spacer(minLength: isCompactLayout ? 16 : 32) }
 
-            if !isUser { Spacer(minLength: 32) }
+                Text(message.text)
+                    .font(AppTheme.Typography.bodyLeading)
+                    .foregroundStyle(textColor)
+                    .lineSpacing(2)
+                    .padding(.horizontal, isCompactLayout ? 12 : 14)
+                    .padding(.vertical, isCompactLayout ? 10 : 11)
+                    .background(bubbleColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.bubble, style: .continuous)
+                            .strokeBorder(
+                                isUser ? Color.accentColor.opacity(0.2) : AppTheme.Surface.tileStroke,
+                                lineWidth: 1
+                            )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.bubble, style: .continuous))
+
+                if !isUser { Spacer(minLength: isCompactLayout ? 16 : 32) }
+            }
         }
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
+    }
+
+    private var isCompactLayout: Bool {
+        horizontalSizeClass == .compact
     }
 }

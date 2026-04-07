@@ -16,13 +16,14 @@ struct ContextPresetButton: View {
 
     var body: some View {
         AppActionTile(isSelected: isSelected, action: action) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(title)
                     .font(.headline)
 
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(isSelected ? Color.accentColor.opacity(0.8) : .secondary)
+                    .lineSpacing(1.5)
             }
         }
     }
@@ -50,12 +51,14 @@ struct OllamaModelCard: View {
                         Text(detailDescription)
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.secondary)
+                            .lineSpacing(2)
                     }
 
                     if let metadataDescription = model.metadataDescription {
                         Text(metadataDescription)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                            .lineSpacing(2)
                     }
                 }
 

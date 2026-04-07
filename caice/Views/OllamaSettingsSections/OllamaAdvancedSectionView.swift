@@ -46,6 +46,7 @@ struct OllamaAdvancedSectionView: View {
                         Text("Expand for session telemetry, raw endpoint details, and the currently applied model configuration.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                            .lineSpacing(2)
                     }
                 }
                 .disclosureGroupStyle(.automatic)

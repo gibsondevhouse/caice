@@ -3,11 +3,11 @@ import Combine
 
 @MainActor
 final class OllamaSettingsViewModel: ObservableObject {
-    @Published internal(set) var availableModels: [OllamaModelInfo] = []
-    @Published internal(set) var isLoading: Bool = false
-    @Published internal(set) var serviceStatus: OllamaServiceStatus = .checking
-    @Published internal(set) var statusDetailText: String?
-    @Published internal(set) var lastCheckedAt: Date?
+    @Published var availableModels: [OllamaModelInfo] = []
+    @Published var isLoading: Bool = false
+    @Published var serviceStatus: OllamaServiceStatus = .checking
+    @Published var statusDetailText: String?
+    @Published var lastCheckedAt: Date?
     @Published var selectedModelName: String
     @Published var errorText: String?
 
