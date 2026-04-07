@@ -46,12 +46,17 @@ enum AppTheme {
         static let y: CGFloat = 7
     }
 
+    enum Motion {
+        static let quick: Double = 0.16
+        static let regular: Double = 0.24
+    }
+
     enum Surface {
-        static let subtleFill = Color.primary.opacity(0.035)
+        static let subtleFill = Color.primary.opacity(0.045)
         static let mutedFill = Color.secondary.opacity(0.09)
-        static let elevatedFill = Color.primary.opacity(0.055)
-        static let stroke = Color.secondary.opacity(0.18)
-        static let tileStroke = Color.secondary.opacity(0.16)
+        static let elevatedFill = Color.primary.opacity(0.07)
+        static let stroke = Color.secondary.opacity(0.2)
+        static let tileStroke = Color.secondary.opacity(0.18)
         static let emphasisStroke = Color.primary.opacity(0.1)
 
         static var windowBackground: Color {

@@ -15,10 +15,9 @@ struct AppSidebarView: View {
 
     var body: some View {
         List(selection: $selection) {
-            Section("Workspace") {
             ForEach(sidebarItems, id: \.destination) { item in
                 Label {
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(item.destination.title)
                             .font(.subheadline.weight(.semibold))
                         Text(item.subtitle)
@@ -28,10 +27,7 @@ struct AppSidebarView: View {
                 } icon: {
                     Image(systemName: item.destination.systemImage)
                 }
-                .padding(.vertical, 4)
                 .tag(item.destination as AppDestination?)
-                .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
-            }
             }
         }
         .listStyle(.sidebar)

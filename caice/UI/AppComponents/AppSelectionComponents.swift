@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AppActionTile<Content: View>: View {
+    @State private var isHovering = false
+
     let isSelected: Bool
     let action: () -> Void
     @ViewBuilder let content: Content
@@ -13,15 +15,22 @@ struct AppActionTile<Content: View>: View {
                 .padding(.vertical, AppTheme.Layout.compactTilePadding)
                 .background(
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.tile, style: .continuous)
-                        .fill(isSelected ? Color.accentColor.opacity(0.14) : AppTheme.Surface.subtleFill)
+                        .fill(isSelected ? Color.accentColor.opacity(0.14) : (isHovering ? AppTheme.Surface.elevatedFill : AppTheme.Surface.subtleFill))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.tile, style: .continuous)
-                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.45) : AppTheme.Surface.tileStroke, lineWidth: 1)
+                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.45) : (isHovering ? AppTheme.Surface.emphasisStroke : AppTheme.Surface.tileStroke), lineWidth: 1)
                 )
+                .scaleEffect(isHovering ? 1.01 : 1)
         }
         .buttonStyle(.plain)
         .contentShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.tile, style: .continuous))
+        .animation(.easeOut(duration: AppTheme.Motion.quick), value: isHovering)
+#if os(macOS)
+        .onHover { hovering in
+            isHovering = hovering
+        }
+#endif
     }
 }
 
