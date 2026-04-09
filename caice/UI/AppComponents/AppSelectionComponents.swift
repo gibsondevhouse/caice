@@ -106,3 +106,263 @@ struct AppSidebarRow: View {
         .buttonStyle(.plain)
     }
 }
+
+struct AppSplitPill: View {
+    static let height: CGFloat = 36
+
+    struct Segment {
+        let title: String
+        let systemImage: String
+        let iconOnly: Bool
+        let isEnabled: Bool
+        let isEmphasized: Bool
+        let keyboardShortcut: KeyboardShortcut?
+        let action: () -> Void
+
+        init(
+            title: String,
+            systemImage: String,
+            iconOnly: Bool = false,
+            isEnabled: Bool,
+            isEmphasized: Bool,
+            keyboardShortcut: KeyboardShortcut? = nil,
+            action: @escaping () -> Void
+        ) {
+            self.title = title
+            self.systemImage = systemImage
+            self.iconOnly = iconOnly
+            self.isEnabled = isEnabled
+            self.isEmphasized = isEmphasized
+            self.keyboardShortcut = keyboardShortcut
+            self.action = action
+        }
+    }
+
+    let leading: Segment
+    let trailing: Segment
+
+    var body: some View {
+        HStack(spacing: 0) {
+            segmentButton(for: leading)
+
+            Rectangle()
+                .fill(AppTheme.Surface.liquidGlassStroke.opacity(0.9))
+                .frame(width: 1)
+                .padding(.vertical, 6)
+
+            segmentButton(for: trailing)
+        }
+        .background(
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppTheme.Surface.liquidGlassDarkTint)
+        )
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppTheme.Surface.liquidGlassComposerGradient)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .strokeBorder(AppTheme.Surface.liquidGlassStroke, lineWidth: 1)
+        )
+        .overlay(alignment: .topLeading) {
+            Capsule(style: .continuous)
+                .strokeBorder(AppTheme.Surface.liquidGlassHighlight.opacity(0.65), lineWidth: 0.5)
+                .padding(1)
+        }
+        .frame(height: Self.height)
+        .clipShape(Capsule(style: .continuous))
+    }
+
+    private func segmentButton(for segment: Segment) -> some View {
+        Button(action: segment.action) {
+            Group {
+                if segment.iconOnly {
+                    Image(systemName: segment.systemImage)
+                } else {
+                    Label(segment.title, systemImage: segment.systemImage)
+                        .labelStyle(.titleAndIcon)
+                        .frame(minWidth: 72)
+                        .padding(.horizontal, 11)
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .foregroundStyle(foregroundColor(for: segment))
+            .background(segmentBackground(for: segment))
+        }
+        .buttonStyle(.plain)
+        .modifier(OptionalKeyboardShortcutModifier(shortcut: segment.keyboardShortcut))
+        .disabled(!segment.isEnabled)
+        .opacity(segment.isEnabled || segment.isEmphasized ? 1 : 0.92)
+    }
+
+    private func foregroundColor(for segment: Segment) -> Color {
+        if segment.isEnabled && segment.isEmphasized {
+            return .white
+        }
+        return AppTheme.Surface.splitPillDisabledForeground
+    }
+
+    @ViewBuilder
+    private func segmentBackground(for segment: Segment) -> some View {
+        Group {
+            if segment.isEnabled && segment.isEmphasized {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor.opacity(0.95),
+                                Color.accentColor.opacity(0.75)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            } else {
+                Rectangle()
+                    .fill(AppTheme.Surface.splitPillDisabledFill)
+            }
+        }
+    }
+}
+
+private struct OptionalKeyboardShortcutModifier: ViewModifier {
+    let shortcut: KeyboardShortcut?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let shortcut {
+            content.keyboardShortcut(shortcut)
+        } else {
+            content
+        }
+    }
+}
+
+struct AppSinglePillControl: View {
+    static let height: CGFloat = 30
+
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(isSelected ? .white : .secondary)
+                .lineLimit(1)
+                .padding(.horizontal, 14)
+                .frame(height: Self.height)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isSelected ? AnyShapeStyle(selectedGradient) : AnyShapeStyle(AppTheme.Surface.liquidGlassComposerGradient))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(isSelected ? Color.accentColor.opacity(0.4) : AppTheme.Surface.liquidGlassStroke, lineWidth: 1)
+                )
+                .overlay(alignment: .topLeading) {
+                    Capsule(style: .continuous)
+                        .strokeBorder(AppTheme.Surface.liquidGlassHighlight.opacity(0.55), lineWidth: 0.5)
+                        .padding(1)
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var selectedGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color.accentColor.opacity(0.95),
+                Color.accentColor.opacity(0.76)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
+
+struct AppTriPillControl: View {
+    struct Segment: Identifiable {
+        let id: String
+        let systemImage: String
+    }
+
+    let segments: [Segment]
+    let selectedID: String
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
+                Button {
+                    onSelect(segment.id)
+                } label: {
+                    Image(systemName: segment.systemImage)
+                        .font(.caption.weight(.semibold))
+                        .frame(minWidth: 34)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .foregroundStyle(selectedID == segment.id ? Color.white : .secondary)
+                        .background(
+                            Group {
+                                if selectedID == segment.id {
+                                    Rectangle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.accentColor.opacity(0.95),
+                                                    Color.accentColor.opacity(0.76)
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                } else {
+                                    Rectangle()
+                                        .fill(Color.clear)
+                                }
+                            }
+                        )
+                }
+                .buttonStyle(.plain)
+
+                if index < segments.count - 1 {
+                    Rectangle()
+                        .fill(AppTheme.Surface.liquidGlassStroke.opacity(0.9))
+                        .frame(width: 1)
+                        .padding(.vertical, 6)
+                }
+            }
+        }
+        .frame(height: AppSplitPill.height)
+        .background(
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppTheme.Surface.liquidGlassDarkTint)
+        )
+        .background(
+            Capsule(style: .continuous)
+                .fill(AppTheme.Surface.liquidGlassComposerGradient)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .strokeBorder(AppTheme.Surface.liquidGlassStroke, lineWidth: 1)
+        )
+        .overlay(alignment: .topLeading) {
+            Capsule(style: .continuous)
+                .strokeBorder(AppTheme.Surface.liquidGlassHighlight.opacity(0.55), lineWidth: 0.5)
+                .padding(1)
+        }
+        .clipShape(Capsule(style: .continuous))
+    }
+}
+

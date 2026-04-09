@@ -70,6 +70,14 @@ enum AppTheme {
         static let emphasisStroke = Color.primary.opacity(0.14)
         static let strongStroke = Color.primary.opacity(0.18)
         static let softOverlay = Color.white.opacity(0.22)
+        static let liquidGlassFill = Color.primary.opacity(0.07)
+        static let liquidGlassTint = Color.white.opacity(0.14)
+        static let liquidGlassDarkTint = Color.black.opacity(0.26)
+        static let liquidGlassStroke = Color.primary.opacity(0.2)
+        static let liquidGlassHighlight = Color.white.opacity(0.3)
+        static let splitPillDisabledFill = Color.secondary.opacity(0.18)
+        static let splitPillDisabledStroke = Color.secondary.opacity(0.22)
+        static let splitPillDisabledForeground = Color.secondary.opacity(0.85)
 
         static var windowBackground: Color {
 #if os(macOS)
@@ -121,6 +129,18 @@ enum AppTheme {
             )
         }
 
+        static var workspaceHeaderGradient: LinearGradient {
+            LinearGradient(
+                stops: [
+                    .init(color: panelBackground.opacity(0.96), location: 0),
+                    .init(color: windowBackground.opacity(0.9), location: 0.48),
+                    .init(color: panelBackground.opacity(0.82), location: 1)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottom
+            )
+        }
+
         static var transcriptGradient: LinearGradient {
             LinearGradient(
                 colors: [
@@ -151,6 +171,17 @@ enum AppTheme {
                 ],
                 startPoint: .top,
                 endPoint: .bottom
+            )
+        }
+
+        static var liquidGlassComposerGradient: LinearGradient {
+            LinearGradient(
+                colors: [
+                    liquidGlassTint,
+                    liquidGlassFill
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
         }
 

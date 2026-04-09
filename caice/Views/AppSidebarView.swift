@@ -1,10 +1,18 @@
 import SwiftUI
 
 struct AppSidebarView: View {
+    @State private var conversationSearchText: String = ""
+
     @Binding var selection: AppDestination?
     let messageCount: Int
     let runtimeModelName: String
+    let threads: [ChatThreadSummary]
+    let selectedThreadID: UUID?
+    let isSending: Bool
     let onNewChat: () -> Void
+    let onSelectThread: (UUID) -> Void
+    let onRequestRenameThread: (UUID) -> Void
+    let onRequestDeleteThread: (UUID) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,6 +58,8 @@ struct AppSidebarView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    conversationsSection
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 11)
@@ -84,6 +94,110 @@ struct AppSidebarView: View {
                 )
             }
         )
+    }
+
+    private var conversationsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+                .padding(.top, 6)
+                .padding(.bottom, 2)
+
+            Text("Conversations")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.7)
+                .padding(.horizontal, 4)
+
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                TextField("Search conversations", text: $conversationSearchText)
+                    .textFieldStyle(.plain)
+                    .font(.caption)
+
+                if !conversationSearchText.isEmpty {
+                    Button {
+                        conversationSearchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(AppTheme.Surface.elevatedFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(AppTheme.Surface.stroke, lineWidth: 1)
+            )
+
+            if filteredThreads.isEmpty {
+                Text("No conversations yet")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 6)
+            } else {
+                ForEach(filteredThreads) { thread in
+                    Button {
+                        selection = .chat
+                        onSelectThread(thread.id)
+                    } label: {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: selectedThreadID == thread.id ? "bubble.left.and.bubble.right.fill" : "bubble.left")
+                                .font(.system(size: 12, weight: .semibold))
+                                .frame(width: 16)
+                                .padding(.top, 1)
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(thread.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+
+                                Text(thread.lastMessagePreview)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+
+                                Text(thread.updatedAt, format: .relative(presentation: .named))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 9)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(threadBackground(for: thread))
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button {
+                            onRequestRenameThread(thread.id)
+                        } label: {
+                            Label("Rename", systemImage: "pencil")
+                        }
+
+                        Button(role: .destructive) {
+                            onRequestDeleteThread(thread.id)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        .disabled(isSending && selectedThreadID == thread.id)
+                    }
+                }
+            }
+        }
     }
 
     private var header: some View {
@@ -153,6 +267,27 @@ struct AppSidebarView: View {
             return messageCount == 0 ? "No messages" : "\(messageCount) messages"
         case .modelSettings:
             return runtimeModelName
+        }
+    }
+
+    private func threadBackground(for thread: ChatThreadSummary) -> some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(selectedThreadID == thread.id ? Color.accentColor.opacity(0.14) : AppTheme.Surface.elevatedFill.opacity(0.001))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(selectedThreadID == thread.id ? Color.accentColor.opacity(0.25) : AppTheme.Surface.stroke.opacity(0), lineWidth: 1)
+            )
+    }
+
+    private var filteredThreads: [ChatThreadSummary] {
+        let query = conversationSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            return threads
+        }
+
+        return threads.filter { thread in
+            thread.title.localizedCaseInsensitiveContains(query)
+                || thread.lastMessagePreview.localizedCaseInsensitiveContains(query)
         }
     }
 }

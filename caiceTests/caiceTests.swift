@@ -11,6 +11,40 @@ import Testing
 
 struct caiceTests {
 
+    @Test func composerControlStateDerivationFollowsContract() {
+        let cases: [(trimmedText: String, isSending: Bool, expected: ComposerControlState)] = [
+            ("", false, .idle),
+            ("   \n  ", false, .idle),
+            ("hello", false, .composing),
+            ("hello", true, .streaming),
+            ("", true, .streaming)
+        ]
+
+        for testCase in cases {
+            let derived = ChatComposerView.resolveControlState(
+                trimmedText: testCase.trimmedText.trimmingCharacters(in: .whitespacesAndNewlines),
+                isSending: testCase.isSending
+            )
+            #expect(derived == testCase.expected)
+        }
+    }
+
+    @Test func composerControlStateFlagsMatchExpectedButtons() {
+        #expect(ComposerControlState.idle.sendEnabled == false)
+        #expect(ComposerControlState.idle.stopEnabled == false)
+
+        #expect(ComposerControlState.composing.sendEnabled == true)
+        #expect(ComposerControlState.composing.stopEnabled == false)
+
+        #expect(ComposerControlState.streaming.sendEnabled == false)
+        #expect(ComposerControlState.streaming.stopEnabled == true)
+    }
+
+    @Test func composerLineAndCharacterCapsMatchRequirements() {
+        #expect(ChatComposerView.maxComposerLines == 10)
+        #expect(ChatComposerView.maxCharacterCount == 4000)
+    }
+
     @Test func factoryUsesOllamaServiceByDefault() {
         let resolution = ChatServiceFactory.resolveDefaultService(environment: [:])
         #expect(resolution.service is OllamaChatService)
@@ -83,7 +117,7 @@ struct caiceTests {
     @MainActor
     @Test func sendAppendsUserAndAssistantMessages() async throws {
         let service = SucceedingService()
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(service: service, conversationStore: InMemoryConversationStore())
 
         viewModel.composerText = "hello"
         await viewModel.sendCurrentMessage()
@@ -99,7 +133,7 @@ struct caiceTests {
     @MainActor
     @Test func streamingSendBuildsAssistantMessageFromDeltas() async throws {
         let service = StreamingService()
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(service: service, conversationStore: InMemoryConversationStore())
 
         viewModel.composerText = "hello"
         await viewModel.sendCurrentMessage()
@@ -113,7 +147,7 @@ struct caiceTests {
     @MainActor
     @Test func failedSendShowsErrorWithoutAssistantMessage() async throws {
         let service = FailingService()
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(service: service, conversationStore: InMemoryConversationStore())
 
         viewModel.composerText = "hello"
         await viewModel.sendCurrentMessage()
@@ -126,7 +160,7 @@ struct caiceTests {
     @MainActor
     @Test func sendPreservesPartialAssistantOnLateFailure() async throws {
         let service = LateFailureService()
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(service: service, conversationStore: InMemoryConversationStore())
 
         viewModel.composerText = "hello"
         await viewModel.sendCurrentMessage()
@@ -140,7 +174,7 @@ struct caiceTests {
     @MainActor
     @Test func cancelDuringStreamResetsSendingStateAndKeepsPartialTranscript() async throws {
         let service = SlowStreamingService()
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(service: service, conversationStore: InMemoryConversationStore())
 
         viewModel.composerText = "hello"
         let sendTask = Task {
@@ -166,7 +200,7 @@ struct caiceTests {
     @MainActor
     @Test func duplicateSendIsPreventedDuringInFlightRequest() async throws {
         let service = SlowStreamingService()
-        let viewModel = ChatViewModel(service: service)
+        let viewModel = ChatViewModel(service: service, conversationStore: InMemoryConversationStore())
 
         viewModel.composerText = "first"
         let firstTask = Task {
@@ -196,7 +230,11 @@ struct caiceTests {
         defaults.removePersistentDomain(forName: suiteName)
 
         let service = RecordingService()
-        let viewModel = ChatViewModel(service: service, defaults: defaults)
+        let viewModel = ChatViewModel(
+            service: service,
+            defaults: defaults,
+            conversationStore: InMemoryConversationStore()
+        )
 
         viewModel.updateModel("gemma3:4b")
 
@@ -227,7 +265,12 @@ struct caiceTests {
             )
         }
 
-        let viewModel = ChatViewModel(service: service, defaults: defaults, session: session)
+        let viewModel = ChatViewModel(
+            service: service,
+            defaults: defaults,
+            session: session,
+            conversationStore: InMemoryConversationStore()
+        )
 
         let reconciled = await viewModel.reconcileModelIfNeeded(
             endpointURL: try #require(URL(string: "http://127.0.0.1:11434")),
@@ -239,6 +282,262 @@ struct caiceTests {
         #expect(defaults.string(forKey: ChatServiceFactory.ollamaModelDefaultsKey) == "gemma3:4b")
 
         defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @MainActor
+    @Test func sendScopesMessagesToSelectedThread() async throws {
+        let service = SucceedingService()
+        let viewModel = ChatViewModel(service: service, conversationStore: InMemoryConversationStore())
+
+        let firstThreadID = viewModel.createThread(select: true)
+        viewModel.composerText = "Thread one"
+        await viewModel.sendCurrentMessage()
+
+        let secondThreadID = viewModel.createThread(title: "Thread Two", select: true)
+        viewModel.composerText = "Thread two"
+        await viewModel.sendCurrentMessage()
+
+        #expect(viewModel.selectedThreadID == secondThreadID)
+        #expect(viewModel.messages.count == 2)
+        #expect(viewModel.messages[0].text == "Thread two")
+
+        viewModel.selectThread(firstThreadID)
+
+        #expect(viewModel.messages.count == 2)
+        #expect(viewModel.messages[0].text == "Thread one")
+        #expect(viewModel.messages[1].text == "ok")
+    }
+
+    @MainActor
+    @Test func viewModelRestoresPersistedThreadsAndSelection() async throws {
+        let suiteName = "caice-tests.viewmodel.thread-persistence"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let store = UserDefaultsConversationStore(defaults: defaults)
+        let firstService = SucceedingService()
+        let firstViewModel = ChatViewModel(
+            service: firstService,
+            defaults: defaults,
+            conversationStore: store
+        )
+
+        firstViewModel.composerText = "Persistent thread"
+        await firstViewModel.sendCurrentMessage()
+
+        let threadID = firstViewModel.createThread(title: "Second", select: true)
+        firstViewModel.composerText = "Second thread"
+        await firstViewModel.sendCurrentMessage()
+        #expect(firstViewModel.selectedThreadID == threadID)
+
+        let secondService = SucceedingService()
+        let restoredViewModel = ChatViewModel(
+            service: secondService,
+            defaults: defaults,
+            conversationStore: store
+        )
+
+        #expect(restoredViewModel.threads.count >= 2)
+        #expect(restoredViewModel.selectedThreadID == threadID)
+        #expect(restoredViewModel.messages.first?.text == "Second thread")
+
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @MainActor
+    @Test func renameThreadSanitizesWhitespaceAndEmptyTitles() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.renameThread(id: threadID, to: "   Project Plan   ")
+        #expect(viewModel.threadTitle(for: threadID) == "Project Plan")
+
+        viewModel.renameThread(id: threadID, to: "   ")
+        #expect(viewModel.threadTitle(for: threadID) == "New Chat")
+    }
+
+    @MainActor
+    @Test func draftTextIsScopedPerThread() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let firstThreadID = viewModel.createThread(select: true)
+
+        viewModel.composerText = "Draft for first"
+
+        let secondThreadID = viewModel.createThread(title: "Second", select: true)
+        #expect(viewModel.composerText.isEmpty)
+
+        viewModel.composerText = "Draft for second"
+        viewModel.selectThread(firstThreadID)
+        #expect(viewModel.composerText == "Draft for first")
+
+        viewModel.selectThread(secondThreadID)
+        #expect(viewModel.composerText == "Draft for second")
+    }
+
+    @MainActor
+    @Test func firstUserMessageAutoTitlesNewConversation() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.composerText = "Plan a weekend project with SwiftUI and Ollama"
+        await viewModel.sendCurrentMessage()
+
+        let title = viewModel.threadTitle(for: threadID)
+        #expect(title != "New Chat")
+        #expect(title.hasPrefix("Plan a Weekend Project"))
+    }
+
+    @MainActor
+    @Test func manualRenamePreventsAutoTitleOverride() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.renameThread(id: threadID, to: "Kitchen Sink")
+        viewModel.composerText = "This message should not replace my title"
+        await viewModel.sendCurrentMessage()
+
+        #expect(viewModel.threadTitle(for: threadID) == "Kitchen Sink")
+    }
+
+    @MainActor
+    @Test func deleteAndRestoreThreadRoundTripsConversation() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.composerText = "Keep me"
+        await viewModel.sendCurrentMessage()
+
+        let deleted = viewModel.deleteThread(id: threadID)
+        #expect(deleted?.id == threadID)
+
+        if let deleted {
+            viewModel.restoreDeletedThread(deleted)
+        }
+
+        #expect(viewModel.selectedThreadID == threadID)
+        #expect(viewModel.messages.first?.text == "Keep me")
+    }
+
+    @MainActor
+    @Test func confirmDeleteRequiredOnlyForNonEmptyThread() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        #expect(viewModel.shouldConfirmDelete(for: threadID) == false)
+
+        viewModel.composerText = "message"
+        await viewModel.sendCurrentMessage()
+
+        #expect(viewModel.shouldConfirmDelete(for: threadID) == true)
+    }
+
+    @MainActor
+    @Test func startsWithNoThreadWhenStoreIsEmpty() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+
+        #expect(viewModel.threads.isEmpty)
+        #expect(viewModel.selectedThreadID == nil)
+        #expect(viewModel.messages.isEmpty)
+    }
+
+    @MainActor
+    @Test func deletingLastThreadLeavesEmptyConversationState() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        let deleted = viewModel.deleteThread(id: threadID)
+
+        #expect(deleted?.id == threadID)
+        #expect(viewModel.threads.isEmpty)
+        #expect(viewModel.selectedThreadID == nil)
+        #expect(viewModel.composerText.isEmpty)
+    }
+
+    // MARK: - Auto-title edge cases
+
+    @MainActor
+    @Test func autoTitleFallsBackForWhitespaceOnlyFirstMessage() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.appendMessage(ChatMessage(role: .user, text: "   \n  "), to: threadID)
+
+        #expect(viewModel.threadTitle(for: threadID) == "New Chat")
+    }
+
+    @MainActor
+    @Test func autoTitleStripsNoisyLeadingPrefix() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.composerText = "Please write a sorting algorithm in Swift"
+        await viewModel.sendCurrentMessage()
+
+        let title = viewModel.threadTitle(for: threadID)
+        #expect(!title.lowercased().hasPrefix("please"))
+        #expect(title.hasPrefix("Write"))
+    }
+
+    @MainActor
+    @Test func autoTitleAppliesTitleCaseForNormalInput() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.composerText = "write a sorting algorithm in swift"
+        await viewModel.sendCurrentMessage()
+
+        #expect(viewModel.threadTitle(for: threadID) == "Write a Sorting Algorithm in Swift")
+    }
+
+    @MainActor
+    @Test func autoTitleCollapsesMultilineInput() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.composerText = "Refactor  this\nfunction to\n\nbe more readable"
+        await viewModel.sendCurrentMessage()
+
+        let title = viewModel.threadTitle(for: threadID)
+        #expect(!title.contains("\n"))
+        #expect(!title.contains("  "))
+    }
+
+    @MainActor
+    @Test func autoTitleHandlesPunctuationHeavyInput() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.appendMessage(ChatMessage(role: .user, text: "???!!!???!!!"), to: threadID)
+
+        #expect(viewModel.threadTitle(for: threadID) == "New Chat")
+    }
+
+    @MainActor
+    @Test func autoTitleConvertsAllCapsToTitleCase() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.appendMessage(ChatMessage(role: .user, text: "GENERATE A SWIFT STRUCT"), to: threadID)
+
+        let title = viewModel.threadTitle(for: threadID)
+        #expect(title != "New Chat")
+        #expect(title.contains(where: { $0.isLowercase }))
+    }
+
+    @MainActor
+    @Test func manualRenameNotOverriddenBySubsequentSends() async throws {
+        let viewModel = ChatViewModel(service: SucceedingService(), conversationStore: InMemoryConversationStore())
+        let threadID = viewModel.createThread(select: true)
+
+        viewModel.composerText = "First message to establish a title"
+        await viewModel.sendCurrentMessage()
+
+        viewModel.renameThread(id: threadID, to: "My Custom Title")
+
+        viewModel.composerText = "This second message should not replace my manual title"
+        await viewModel.sendCurrentMessage()
+
+        #expect(viewModel.threadTitle(for: threadID) == "My Custom Title")
     }
 
 }
@@ -390,4 +689,16 @@ private final class TestURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+}
+
+private final class InMemoryConversationStore: ConversationStore, @unchecked Sendable {
+    private var snapshot = ConversationStoreSnapshot(threads: [], selectedThreadID: nil)
+
+    func load() -> ConversationStoreSnapshot {
+        snapshot
+    }
+
+    func save(_ snapshot: ConversationStoreSnapshot) {
+        self.snapshot = snapshot
+    }
 }

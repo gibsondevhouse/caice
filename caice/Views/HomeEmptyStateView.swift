@@ -7,8 +7,8 @@ struct HomeEmptyStateView: View {
     let onPromptSelected: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: isCompactLayout ? 18 : 24) {
-            VStack(alignment: .leading, spacing: isCompactLayout ? 10 : 12) {
+        VStack(alignment: .center, spacing: isCompactLayout ? 18 : 24) {
+            VStack(alignment: .center, spacing: isCompactLayout ? 10 : 12) {
                 Text("Start a conversation")
                     .font(AppTheme.Typography.overline)
                     .textCase(.uppercase)
@@ -24,12 +24,12 @@ struct HomeEmptyStateView: View {
                     .font(.title3.weight(.regular))
                     .foregroundStyle(.secondary)
                     .lineSpacing(3)
-                    .frame(maxWidth: 720, alignment: .leading)
+                    .frame(maxWidth: 720, alignment: .center)
             }
 
             StarterPromptCardsView(prompts: prompts, onPromptSelected: onPromptSelected)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private var isCompactLayout: Bool {
@@ -45,12 +45,12 @@ private struct StarterPromptCardsView: View {
 
     private var columns: [GridItem] {
         [
-            GridItem(.adaptive(minimum: isCompactLayout ? 220 : 290), spacing: 12, alignment: .leading)
+            GridItem(.adaptive(minimum: isCompactLayout ? 220 : 290), spacing: 12, alignment: .center)
         ]
     }
 
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+        LazyVGrid(columns: columns, alignment: .center, spacing: 10) {
             ForEach(prompts, id: \.self) { prompt in
                 AppActionTile(isSelected: false, action: {
                     onPromptSelected(prompt)
