@@ -217,6 +217,14 @@ struct ContentView: View {
                         await viewModel.sendCurrentMessage()
                     }
                 },
+                onSuggestionAction: { userVisibleMessage, modelPrompt in
+                    Task {
+                        await viewModel.sendSuggestionAction(
+                            displayText: userVisibleMessage,
+                            modelPrompt: modelPrompt
+                        )
+                    }
+                },
                 onCancel: {
                     viewModel.cancelCurrentSend()
                 }

@@ -17,6 +17,7 @@ struct ChatWorkspaceView: View {
     let onPromptSelected: (String) -> Void
     let onSelectModel: (String) -> Void
     let onSend: () -> Void
+    let onSuggestionAction: (String, String) -> Void
     let onCancel: () -> Void
 
     var body: some View {
@@ -167,9 +168,11 @@ struct ChatWorkspaceView: View {
     private var composerSection: some View {
         ChatComposerView(
             text: $composerText,
+            showsModeSuggestions: showsCenteredComposerLayout,
             isSending: isSending,
             errorText: errorText,
             onSend: onSend,
+            onSuggestionAction: onSuggestionAction,
             onCancel: onCancel
         )
         .background(

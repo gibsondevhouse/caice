@@ -4,17 +4,30 @@ extension ChatViewModel {
 
     func sendCurrentMessage() async {
         let outgoingText = composerText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !outgoingText.isEmpty else { return }
+        await sendMessage(displayText: outgoingText, modelPrompt: outgoingText, clearComposer: true)
+    }
+
+    func sendSuggestionAction(displayText: String, modelPrompt: String) async {
+        let sanitizedDisplay = displayText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sanitizedPrompt = modelPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        await sendMessage(displayText: sanitizedDisplay, modelPrompt: sanitizedPrompt, clearComposer: false)
+    }
+
+    private func sendMessage(displayText: String, modelPrompt: String, clearComposer: Bool) async {
+        guard !modelPrompt.isEmpty else { return }
         guard !isSending else { return }
 
         let threadID = ensureSelectedThreadID()
 
         errorText = nil
         isSending = true
-        composerText = ""
+        if clearComposer {
+            composerText = ""
+        }
         activeSendThreadID = threadID
 
-        let userMessage = ChatMessage(role: .user, text: outgoingText)
+        let resolvedDisplayText = displayText.isEmpty ? modelPrompt : displayText
+        let userMessage = ChatMessage(role: .user, text: resolvedDisplayText)
         appendMessage(userMessage, to: threadID)
         let conversation = self.conversation(for: threadID)
         let assistantMessageID = appendAssistantPlaceholder(in: threadID)
@@ -22,7 +35,7 @@ extension ChatViewModel {
         sendTask = Task {
             try await service.send(
                 conversation: conversation,
-                newMessage: outgoingText,
+                newMessage: modelPrompt,
                 onDelta: { delta in
                     await MainActor.run {
                         self.appendAssistantDelta(delta, to: assistantMessageID, in: threadID)
