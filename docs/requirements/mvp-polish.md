@@ -142,8 +142,4 @@ Actions:
 - [ ] Lifecycle persistence guards (background, termination, inactive)
 - [ ] Minimal structured logging
 - [ ] Production test suite for persistence + streaming
-- [ ] Performance sanity checks with synthetic dataset
-
----
-
-If you want, tell me your current thread/message scale target (ex: “20 threads, 1k messages total” vs “hundreds of threads”) and whether you want SwiftData or a simple file-backed store, and I’ll re-write this as a concrete PR plan with function signatures and migration approach.
+- [ ] Performance sanity checks with synthetic dataset.
