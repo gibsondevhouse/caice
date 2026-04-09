@@ -17,17 +17,12 @@ struct ChatWorkspaceView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AppPageHeader(
-                title: "Chat",
-                subtitle: "Local | \(runtimeModelName) | \(runtimeBadgeText)",
-                titleFont: isCompactLayout ? .title2.weight(.semibold) : AppTheme.Typography.pageTitle,
-                subtitleFont: .subheadline
-            )
+            workspaceHeader
             .frame(maxWidth: AppTheme.Layout.chatContentWidth, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, contentGutter)
             .padding(.top, isCompactLayout ? 20 : AppTheme.Layout.pageVerticalPadding)
-            .padding(.bottom, 10)
+            .padding(.bottom, 14)
 
             if messages.isEmpty {
                 emptyContent
@@ -47,12 +42,47 @@ struct ChatWorkspaceView: View {
             .frame(maxWidth: AppTheme.Layout.chatContentWidth)
             .frame(maxWidth: .infinity)
             .padding(.horizontal, contentGutter)
-            .padding(.top, 12)
+            .padding(.top, 14)
             .padding(.bottom, isCompactLayout ? 14 : 22)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(AppTheme.Surface.appBackdropGradient)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
+    }
+
+    private var workspaceHeader: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            AppPageHeader(
+                title: "Chat",
+                subtitle: "Local-first conversation workspace",
+                titleFont: isCompactLayout ? .title2.weight(.semibold) : AppTheme.Typography.pageTitle,
+                subtitleFont: .subheadline
+            )
+
+            HStack(spacing: 9) {
+                headerPill(icon: "cpu", text: runtimeModelName)
+                headerPill(icon: "bolt.fill", text: runtimeBadgeText)
+            }
+        }
+        .padding(.vertical, 5)
+    }
+
+    private func headerPill(icon: String, text: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(
+                Capsule()
+                    .fill(AppTheme.Surface.premiumPillGradient)
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(AppTheme.Surface.tileStroke, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 5)
     }
 
     private var emptyContent: some View {
@@ -63,21 +93,34 @@ struct ChatWorkspaceView: View {
         .frame(maxWidth: AppTheme.Layout.chatContentWidth, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .top)
         .padding(.horizontal, contentGutter)
-        .padding(.top, 10)
+        .padding(.top, 8)
     }
 
     private var transcriptContent: some View {
         ScrollViewReader { proxy in
             AppCard(padding: 0) {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(messages) { message in
-                            MessageBubble(message: message)
-                                .id(message.id)
+                ZStack {
+                    AppTheme.Surface.transcriptGradient
+
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.14),
+                            Color.clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+
+                    ScrollView {
+                        LazyVStack(spacing: 14) {
+                            ForEach(messages) { message in
+                                MessageBubble(message: message)
+                                    .id(message.id)
+                            }
                         }
+                        .padding(.horizontal, AppTheme.Layout.transcriptPadding)
+                        .padding(.vertical, AppTheme.Layout.transcriptPadding)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
                 }
             }
             .frame(minHeight: isCompactLayout ? 240 : 320)
@@ -108,6 +151,6 @@ struct ChatWorkspaceView: View {
     }
 
     private var contentGutter: CGFloat {
-        isCompactLayout ? 16 : AppTheme.Layout.contentGutter
+        isCompactLayout ? AppTheme.Layout.compactContentGutter : AppTheme.Layout.contentGutter
     }
 }

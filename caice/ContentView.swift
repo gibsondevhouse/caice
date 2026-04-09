@@ -28,28 +28,31 @@ struct ContentView: View {
     }
 
     var body: some View {
+        rootContainer
+            .task {
+                await reconcileRuntimeModelIfNeeded()
+            }
+    }
+
+    @ViewBuilder
+    private var rootContainer: some View {
+#if os(macOS)
+        HStack(spacing: 0) {
+            sidebarContent
+                .frame(width: AppTheme.Layout.sidebarWidth)
+
+            Divider()
+
+            detailPane
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+#else
         NavigationSplitView {
             sidebarContent
         } detail: {
             detailPane
         }
-#if os(macOS)
-        .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
-        .navigationSplitViewStyle(.automatic)
 #endif
-        .onAppear {
-            if selection == nil {
-                selection = .chat
-            }
-        }
-        .onChange(of: selection) {
-            if selection == nil {
-                selection = .chat
-            }
-        }
-        .task {
-            await reconcileRuntimeModelIfNeeded()
-        }
     }
 
     private var sidebarContent: some View {
@@ -66,7 +69,23 @@ struct ContentView: View {
     private var detailPane: some View {
         detailContent
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(AppTheme.Surface.windowBackground)
+            .background {
+                ZStack {
+                    AppTheme.Surface.appBackdropGradient
+
+                    Circle()
+                        .fill(AppTheme.Surface.warmGlow.opacity(0.16))
+                        .frame(width: 540, height: 540)
+                        .blur(radius: 80)
+                        .offset(x: -240, y: -280)
+
+                    Circle()
+                        .fill(AppTheme.Surface.coolGlow.opacity(0.12))
+                        .frame(width: 500, height: 500)
+                        .blur(radius: 90)
+                        .offset(x: 260, y: -220)
+                }
+            }
     }
 
     @ViewBuilder
